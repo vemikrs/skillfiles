@@ -44,72 +44,86 @@
       {
         "command": "skillfiles.openSkill",
         "title": "Open Skill",
-        "category": "Skillfiles"
+        "category": "Skillfiles",
+        "icon": "$(file-code)"
       },
       {
-        "command": "skillfiles.pushToRepo",
-        "title": "Push to Repository",
-        "category": "Skillfiles"
+        "command": "skillfiles.createSkill",
+        "title": "Create New Skill",
+        "category": "Skillfiles",
+        "icon": "$(add)"
       },
       {
-        "command": "skillfiles.collectFromRepo",
-        "title": "Collect from Repository",
-        "category": "Skillfiles"
+        "command": "skillfiles.pushSkill",
+        "title": "Push Skill to Repository",
+        "category": "Skillfiles",
+        "icon": "$(repo-push)"
+      },
+      {
+        "command": "skillfiles.collectSkill",
+        "title": "Collect Skill from Repository",
+        "category": "Skillfiles",
+        "icon": "$(repo-pull)"
+      },
+      {
+        "command": "skillfiles.rollbackSkill",
+        "title": "Rollback to Snapshot",
+        "category": "Skillfiles",
+        "icon": "$(history)"
+      },
+      {
+        "command": "skillfiles.previewSnapshot",
+        "title": "Preview Snapshot",
+        "category": "Skillfiles",
+        "icon": "$(preview)"
       },
       {
         "command": "skillfiles.showDiff",
         "title": "Show Diff",
-        "category": "Skillfiles"
+        "category": "Skillfiles",
+        "icon": "$(diff)"
       },
       {
-        "command": "skillfiles.editTargetVars",
-        "title": "Edit Target Variables",
-        "category": "Skillfiles"
+        "command": "skillfiles.refreshAll",
+        "title": "Refresh All Views",
+        "category": "Skillfiles",
+        "icon": "$(refresh)"
       },
       {
-        "command": "skillfiles.editTargetPath",
-        "title": "Edit Target Path",
-        "category": "Skillfiles"
+        "command": "skillfiles.refreshSkills",
+        "title": "Refresh Skills",
+        "category": "Skillfiles",
+        "icon": "$(refresh)"
       },
       {
-        "command": "skillfiles.refresh",
-        "title": "Refresh",
-        "category": "Skillfiles"
+        "command": "skillfiles.refreshRepoStatus",
+        "title": "Refresh Repo Status",
+        "category": "Skillfiles",
+        "icon": "$(refresh)"
       },
       {
-        "command": "skillfiles.scanRoots",
-        "title": "Configure Scan Roots",
-        "category": "Skillfiles"
+        "command": "skillfiles.refreshHistory",
+        "title": "Refresh History",
+        "category": "Skillfiles",
+        "icon": "$(refresh)"
       },
       {
         "command": "skillfiles.bulkPush",
-        "title": "Bulk Push",
-        "category": "Skillfiles"
+        "title": "Bulk Push All Skills",
+        "category": "Skillfiles",
+        "icon": "$(cloud-upload)"
       },
       {
         "command": "skillfiles.bulkCollect",
-        "title": "Bulk Collect",
-        "category": "Skillfiles"
-      },
-      {
-        "command": "skillfiles.rollback",
-        "title": "Rollback",
-        "category": "Skillfiles"
-      },
-      {
-        "command": "skillfiles.importSkills",
-        "title": "Import Skills",
-        "category": "Skillfiles"
-      },
-      {
-        "command": "skillfiles.openHistory",
-        "title": "Open History",
-        "category": "Skillfiles"
+        "title": "Bulk Collect All Skills",
+        "category": "Skillfiles",
+        "icon": "$(cloud-download)"
       },
       {
         "command": "skillfiles.openAuditLog",
         "title": "Open Audit Log",
-        "category": "Skillfiles"
+        "category": "Skillfiles",
+        "icon": "$(list-unordered)"
       }
     ],
     "viewsContainers": {
@@ -132,11 +146,6 @@
           "id": "skillfiles.repoStatusView",
           "name": "Repo Status",
           "icon": "$(repo)"
-        },
-        {
-          "id": "skillfiles.sharedSkillsView",
-          "name": "Shared Skills",
-          "icon": "$(globe)"
         },
         {
           "id": "skillfiles.historyView",

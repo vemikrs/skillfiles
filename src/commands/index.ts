@@ -252,4 +252,156 @@ Write your skill instructions here.
       }
     )
   );
+
+  // Show diff command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.showDiff',
+      async (item?: TargetTreeItem) => {
+        if (!item) {
+          vscode.window.showWarningMessage('Select a target to show diff');
+          return;
+        }
+
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          const skill = registry.skills.find(s => s.name === item.target.skillName);
+          
+          if (!skill?.path) {
+            vscode.window.showErrorMessage('Skill not found');
+            return;
+          }
+
+          const leftUri = vscode.Uri.file(skill.path);
+          const rightUri = vscode.Uri.file(item.target.deployPath ?? '');
+          
+          await vscode.commands.executeCommand(
+            'vscode.diff',
+            leftUri,
+            rightUri,
+            `${item.target.skillName}: Registry ↔ Deployed`
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage(`Show diff failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Bulk push command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.bulkPush',
+      async () => {
+        const confirm = await vscode.window.showWarningMessage(
+          'Push all skills to their targets?',
+          'Yes',
+          'Cancel'
+        );
+
+        if (confirm !== 'Yes') {
+          return;
+        }
+
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          let pushCount = 0;
+          let errorCount = 0;
+
+          for (const target of registry.targets || []) {
+            try {
+              const skill = registry.skills.find(s => s.name === target.skillName);
+              if (!skill?.path || !target.deployPath) continue;
+
+              await deps.pushService.push({
+                skillName: target.skillName,
+                skillPath: skill.path,
+                deployPath: target.deployPath,
+                vars: target.vars || {},
+                context: { scope: 'repo' }
+              });
+              pushCount++;
+            } catch {
+              errorCount++;
+            }
+          }
+
+          deps.repoStatusView.refresh();
+          vscode.window.showInformationMessage(
+            `Bulk push complete: ${pushCount} succeeded, ${errorCount} failed`
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage(`Bulk push failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Bulk collect command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.bulkCollect',
+      async () => {
+        const confirm = await vscode.window.showWarningMessage(
+          'Collect all skills from their targets?',
+          'Yes',
+          'Cancel'
+        );
+
+        if (confirm !== 'Yes') {
+          return;
+        }
+
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          let collectCount = 0;
+          let errorCount = 0;
+
+          for (const target of registry.targets || []) {
+            try {
+              const skill = registry.skills.find(s => s.name === target.skillName);
+              if (!skill?.path || !target.deployPath) continue;
+
+              await deps.collectService.collect({
+                skillName: target.skillName,
+                sourcePath: target.deployPath,
+                registryRoot: skill.path.replace(/\/skills\/.*$/, '')
+              });
+              collectCount++;
+            } catch {
+              errorCount++;
+            }
+          }
+
+          deps.skillsView.refresh();
+          deps.historyView.refresh();
+          vscode.window.showInformationMessage(
+            `Bulk collect complete: ${collectCount} succeeded, ${errorCount} failed`
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage(`Bulk collect failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Open audit log command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.openAuditLog',
+      async () => {
+        try {
+          const config = vscode.workspace.getConfiguration('skillfiles');
+          const registryPath = config.get<string>('registryPath') || '~/.skillfiles';
+          const expandedPath = registryPath.replace(/^~/, process.env.HOME || '');
+          const auditLogPath = vscode.Uri.file(`${expandedPath}/audit.log`);
+          
+          const doc = await vscode.workspace.openTextDocument(auditLogPath);
+          await vscode.window.showTextDocument(doc, { preview: true });
+        } catch (error) {
+          vscode.window.showErrorMessage(`Open audit log failed: ${error}`);
+        }
+      }
+    )
+  );
 }
