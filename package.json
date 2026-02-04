@@ -126,22 +126,22 @@
         {
           "id": "skillfiles.skillsView",
           "name": "Skills",
-          "icon": "resources/skillfiles.svg"
+          "icon": "$(file-code)"
         },
         {
           "id": "skillfiles.repoStatusView",
           "name": "Repo Status",
-          "icon": "resources/skillfiles.svg"
+          "icon": "$(repo)"
         },
         {
           "id": "skillfiles.sharedSkillsView",
           "name": "Shared Skills",
-          "icon": "resources/skillfiles.svg"
+          "icon": "$(globe)"
         },
         {
           "id": "skillfiles.historyView",
           "name": "History",
-          "icon": "resources/skillfiles.svg"
+          "icon": "$(history)"
         }
       ]
     },
