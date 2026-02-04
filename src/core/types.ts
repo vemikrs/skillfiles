@@ -12,6 +12,7 @@ export interface AgentProfile {
 }
 
 export interface Target {
+  skillName: string;
   repoPath: string;
   scanPath: string;
   agent: string;
@@ -24,14 +25,19 @@ export interface Skill {
   name: string;
   description?: string;
   scope: Scope;
+  category?: string;
+  path?: string;
+  template?: string;
   registryPath: string;
   defaultVars?: Record<string, string>;
   targets: Target[];
 }
 
 export interface Registry {
+  registryRoot?: string;
   agentProfiles: Record<string, AgentProfile>;
   skills: Skill[];
+  targets?: Target[];
 }
 
 export interface Meta {
@@ -63,6 +69,7 @@ export interface ScanRoot {
 }
 
 export interface TargetWithStatus extends Target {
+  skillName: string;
   status: TargetStatus;
   absoluteRepoPath?: string;
   absoluteDeployPath?: string;
