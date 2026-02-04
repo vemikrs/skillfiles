@@ -1,0 +1,226 @@
+{
+  "name": "skillfiles",
+  "displayName": "Skillfiles",
+  "description": "Local-first agent skill manager for VS Code",
+  "version": "0.1.0",
+  "publisher": "mi",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "skillfiles.openSkill",
+        "title": "Open Skill",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.pushToRepo",
+        "title": "Push to Repository",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.collectFromRepo",
+        "title": "Collect from Repository",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.showDiff",
+        "title": "Show Diff",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.editTargetVars",
+        "title": "Edit Target Variables",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.editTargetPath",
+        "title": "Edit Target Path",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.refresh",
+        "title": "Refresh",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.scanRoots",
+        "title": "Configure Scan Roots",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.bulkPush",
+        "title": "Bulk Push",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.bulkCollect",
+        "title": "Bulk Collect",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.rollback",
+        "title": "Rollback",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.importSkills",
+        "title": "Import Skills",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.openHistory",
+        "title": "Open History",
+        "category": "Skillfiles"
+      },
+      {
+        "command": "skillfiles.openAuditLog",
+        "title": "Open Audit Log",
+        "category": "Skillfiles"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "skillfiles",
+          "title": "Skillfiles",
+          "icon": "resources/skillfiles.svg"
+        }
+      ]
+    },
+    "views": {
+      "skillfiles": [
+        {
+          "id": "skillfiles.skillsView",
+          "name": "Skills"
+        },
+        {
+          "id": "skillfiles.repoStatusView",
+          "name": "Repo Status"
+        },
+        {
+          "id": "skillfiles.sharedSkillsView",
+          "name": "Shared Skills"
+        },
+        {
+          "id": "skillfiles.historyView",
+          "name": "History"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Skillfiles",
+      "properties": {
+        "skillfiles.registryPath": {
+          "type": "string",
+          "default": "~/.skillfiles",
+          "description": "Path to the skill registry root"
+        },
+        "skillfiles.sharedSkillRoot": {
+          "type": "string",
+          "default": "~/.agents",
+          "description": "Path to shared skills root"
+        },
+        "skillfiles.scanRoots": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "Unique key for this scan root"
+              },
+              "path": {
+                "type": "string",
+                "description": "Absolute path to scan"
+              }
+            },
+            "required": ["key", "path"]
+          },
+          "description": "List of scan roots with key-path pairs"
+        },
+        "skillfiles.scanLimit": {
+          "type": "number",
+          "default": 200,
+          "description": "Maximum number of repositories to scan"
+        },
+        "skillfiles.autoPushOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically push changes when skill.md is saved"
+        },
+        "skillfiles.conflictPolicy": {
+          "type": "string",
+          "enum": ["ask", "preferRegistry", "preferRepo"],
+          "default": "ask",
+          "description": "Policy for handling conflicts during collect"
+        },
+        "skillfiles.dryRun": {
+          "type": "boolean",
+          "default": false,
+          "description": "Preview changes without writing files"
+        },
+        "skillfiles.safeMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Require confirmation for destructive operations"
+        },
+        "skillfiles.auditLogRetentionDays": {
+          "type": "number",
+          "default": 90,
+          "description": "Number of days to retain audit logs"
+        },
+        "skillfiles.historyRetentionCount": {
+          "type": "number",
+          "default": 50,
+          "description": "Number of history snapshots to retain per skill"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "pnpm run compile",
+    "test": "pnpm run test:unit && pnpm run test:integration",
+    "test:unit": "mocha --require ts-node/register 'src/test/unit/**/*.test.ts'",
+    "test:integration": "mocha --require ts-node/register 'src/test/integration/**/*.test.ts'",
+    "test:e2e": "node ./out/test/runTest.js",
+    "test:coverage": "nyc pnpm run test",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@types/sinon": "^17.0.3",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.18.0",
+    "@typescript-eslint/parser": "^6.18.0",
+    "@vscode/test-electron": "^2.3.8",
+    "chai": "^4.4.1",
+    "eslint": "^8.56.0",
+    "glob": "^10.3.10",
+    "mocha": "^10.2.0",
+    "nyc": "^15.1.0",
+    "sinon": "^17.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "handlebars": "^4.7.8",
+    "js-yaml": "^4.1.0"
+  }
+}

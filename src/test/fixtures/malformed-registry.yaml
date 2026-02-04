@@ -1,0 +1,4 @@
+agentProfiles:
+  copilot
+    vendor: github
+  # Missing colon after copilot - this is invalid YAML

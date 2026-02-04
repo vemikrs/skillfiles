@@ -1,0 +1,10 @@
+node_modules/
+out/
+*.vsix
+.vscode-test/
+coverage/
+.nyc_output/
+.pnpm-store/
+
+# 初期開発中はドキュメントは無視
+/docs

@@ -1,0 +1,37 @@
+agentProfiles:
+  copilot:
+    vendor: github
+    defaultDeployPath: .agent/copilot/skill.md
+  claude:
+    vendor: anthropic
+    defaultDeployPath: .claude/skill.md
+
+skills:
+  - name: github-pr-review
+    description: "PR review and response skill"
+    scope: repo
+    registryPath: skills/github-pr-review/skill.md
+    defaultVars:
+      OWNER: mi
+    targets:
+      - repoPath: repo-a
+        scanPath: devel
+        agent: copilot
+        vars:
+          REPO_NAME: repo-a
+      - repoPath: repo-b
+        scanPath: devel
+        agent: copilot
+        vars:
+          REPO_NAME: repo-b
+  
+  - name: coding-standard
+    description: "Shared coding standard skill"
+    scope: shared
+    registryPath: skills/coding-standard/skill.md
+    targets:
+      - repoPath: repo-a
+        scanPath: devel
+        agents: [copilot, claude]
+        vars:
+          REPO_NAME: repo-a
