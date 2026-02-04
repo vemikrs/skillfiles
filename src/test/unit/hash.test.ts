@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { computeHash } from '../../utils/hash';
+import { computeHash } from '../../utils/hash.js';
 
 describe('HashCalculator', () => {
   describe('computeHash', () => {

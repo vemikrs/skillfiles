@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { expandHome, normalizePath } from '../../utils/path';
+import { expandHome, normalizePath } from '../../utils/path.js';
 import * as os from 'os';
 import * as path from 'path';
 
