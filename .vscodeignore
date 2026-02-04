@@ -1,0 +1,35 @@
+# Development files
+.vscode/**
+.vscode-test/**
+src/**
+out/test/**
+.gitignore
+.git/**
+.github/**
+**/*.map
+
+# Source and config
+tsconfig.json
+eslint.config.js
+.eslintrc*
+**/*.ts
+!out/**/*.d.ts
+
+# Test files
+**/test/**
+**/*.test.js
+**/fixtures/**
+
+# Package manager
+node_modules/**
+.pnpm-store/**
+pnpm-lock.yaml
+
+# Build artifacts
+coverage/**
+.nyc_output/**
+
+# Documentation (dev only)
+docs/**
+AGENTS.md
+CONTRIBUTING.md

@@ -1,10 +1,18 @@
-node_modules/
+# Build output
 out/
 *.vsix
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Test output
 .vscode-test/
 coverage/
 .nyc_output/
-.pnpm-store/
 
-# 初期開発中はドキュメントは無視
+# Editor
+.DS_Store
+
+# Development docs (not for Git)
 /docs

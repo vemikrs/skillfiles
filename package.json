@@ -1,16 +1,39 @@
 {
   "name": "skillfiles",
   "displayName": "Skillfiles",
-  "description": "Local-first agent skill manager for VS Code",
+  "description": "Centrally manage AI agent skill definitions across repositories",
   "version": "0.1.0",
   "publisher": "mi",
   "license": "MIT",
   "type": "module",
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mi/skillfiles"
+  },
+  "bugs": {
+    "url": "https://github.com/mi/skillfiles/issues"
+  },
+  "homepage": "https://github.com/mi/skillfiles#readme",
+  "keywords": [
+    "ai",
+    "agent",
+    "copilot",
+    "claude",
+    "skill",
+    "prompt",
+    "management"
+  ],
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.108.1"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Machine Learning"
   ],
   "activationEvents": [
     "onStartupFinished"
