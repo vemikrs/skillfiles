@@ -4,3 +4,5 @@ export * from './path-resolver.js';
 export * from './registry-store.js';
 export * from './history-manager.js';
 export * from './audit-log-store.js';
+export * from './template-engine.js';
+export * from './diff-engine.js';
