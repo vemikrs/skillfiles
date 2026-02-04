@@ -40,7 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
   const settings = settingsManager.getSettings();
 
   // 3. Initialize guardrails
-  const guardrails = new Guardrails({
+  const _guardrails = new Guardrails({
     allowedPaths: scanRoots.map(r => r.path),
     excludePatterns: ['**/node_modules/**', '**/.git/**']
   });
@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
   const auditLog = new AuditLogStore(registryPath);
   const templateEngine = new TemplateEngine();
   const diffEngine = new DiffEngine();
-  const repoScanner = new RepoScanner(scanRoots);
+  const _repoScanner = new RepoScanner(scanRoots);
 
   // 5. Initialize services
   const pushService = new PushService(historyManager, auditLog, templateEngine);

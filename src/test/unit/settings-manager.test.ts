@@ -42,8 +42,8 @@ describe('SettingsManager', () => {
 
     it('should merge user settings with defaults', () => {
       mockWorkspaceConfig.get.callsFake((key: string) => {
-        if (key === 'scanPaths') return [{ key: 'home', path: '~/repos' }];
-        if (key === 'registryPath') return '~/.skillfiles';
+        if (key === 'scanPaths') {return [{ key: 'home', path: '~/repos' }];}
+        if (key === 'registryPath') {return '~/.skillfiles';}
         return undefined;
       });
       
@@ -69,7 +69,7 @@ describe('SettingsManager', () => {
   describe('getScanRoots', () => {
     it('should expand home directory in paths', () => {
       mockWorkspaceConfig.get.callsFake((key: string) => {
-        if (key === 'scanPaths') return [{ key: 'home', path: '~/repos' }];
+        if (key === 'scanPaths') {return [{ key: 'home', path: '~/repos' }];}
         return undefined;
       });
       
@@ -84,7 +84,7 @@ describe('SettingsManager', () => {
   describe('getRegistryPath', () => {
     it('should expand home directory in registry path', () => {
       mockWorkspaceConfig.get.callsFake((key: string) => {
-        if (key === 'registryPath') return '~/.skillfiles';
+        if (key === 'registryPath') {return '~/.skillfiles';}
         return undefined;
       });
       

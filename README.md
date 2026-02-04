@@ -57,10 +57,16 @@ Automatic snapshots before every change. Roll back to any previous version with 
 
 Access via Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 
-- **Skillfiles: Push to Repository** - Deploy skill to a repository
-- **Skillfiles: Collect from Repository** - Import changes from repository
-- **Skillfiles: Show Diff** - Compare registry and repository versions
-- **Skillfiles: Rollback** - Restore a previous version
+| Command              | Description                                     |
+| -------------------- | ----------------------------------------------- |
+| **Push Skill**       | Deploy skill to a target repository             |
+| **Collect Skill**    | Import changes from repository back to registry |
+| **Show Diff**        | Compare registry and deployed versions          |
+| **Rollback**         | Restore a previous version from history         |
+| **Bulk Push**        | Push all skills to all targets                  |
+| **Bulk Collect**     | Collect all skills from all targets             |
+| **Create New Skill** | Create a new skill in the registry              |
+| **Open Audit Log**   | View all operations history                     |
 
 ## Requirements
 

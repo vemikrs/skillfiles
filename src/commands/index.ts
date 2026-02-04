@@ -311,7 +311,7 @@ Write your skill instructions here.
           for (const target of registry.targets || []) {
             try {
               const skill = registry.skills.find(s => s.name === target.skillName);
-              if (!skill?.path || !target.deployPath) continue;
+              if (!skill?.path || !target.deployPath) {continue;}
 
               await deps.pushService.push({
                 skillName: target.skillName,
@@ -360,7 +360,7 @@ Write your skill instructions here.
           for (const target of registry.targets || []) {
             try {
               const skill = registry.skills.find(s => s.name === target.skillName);
-              if (!skill?.path || !target.deployPath) continue;
+              if (!skill?.path || !target.deployPath) {continue;}
 
               await deps.collectService.collect({
                 skillName: target.skillName,
