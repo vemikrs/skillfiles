@@ -7,3 +7,5 @@ export * from './audit-log-store.js';
 export * from './template-engine.js';
 export * from './diff-engine.js';
 export * from './repo-scanner.js';
+export * from './settings-manager.js';
+export * from './guardrails.js';

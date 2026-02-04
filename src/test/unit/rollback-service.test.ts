@@ -83,6 +83,10 @@ describe('RollbackService', () => {
       fs.writeFileSync(path.join(skillDir, 'skill.md'), 'Current Content');
       
       await historyManager.saveSnapshot('test-skill', 'Old Content');
+      
+      // Wait a bit to ensure different timestamps
+      await new Promise(r => setTimeout(r, 10));
+      
       const snapshots = await historyManager.listSnapshots('test-skill');
       
       const rollbackService = new RollbackService(historyManager, auditLog);

@@ -33,8 +33,10 @@ export class HistoryManager {
    * Returns the path to the snapshot directory.
    */
   async saveSnapshot(skillName: string, content: string): Promise<string> {
+    // Add random suffix for uniqueness (prevents same-millisecond conflicts)
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const snapshotDir = this.getSnapshotDir(skillName, timestamp);
+    const randomSuffix = Math.random().toString(36).substring(2, 6);
+    const snapshotDir = this.getSnapshotDir(skillName, `${timestamp}-${randomSuffix}`);
     
     await fs.mkdir(snapshotDir, { recursive: true });
     
