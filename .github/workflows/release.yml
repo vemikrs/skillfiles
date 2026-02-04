@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - prerelease
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "package.json"
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - run: pnpm install
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Version Bump & Tag
+        id: version
+        run: |
+          VERSION=$(cat VERSION)
+          echo "Current: $VERSION"
+
+          # Check if tag exists, bump if needed
+          TAG_NAME="v$VERSION"
+          while git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME"; do
+            if [[ $VERSION =~ ^(.+)-([a-z]+)\.([0-9]+)$ ]]; then
+              PREFIX="${BASH_REMATCH[1]}"
+              LABEL="${BASH_REMATCH[2]}"
+              NUM=$((${BASH_REMATCH[3]} + 1))
+              VERSION="$PREFIX-$LABEL.$NUM"
+            else
+              IFS='.' read -ra P <<< "$VERSION"
+              VERSION="${P[0]}.${P[1]}.$((${P[2]} + 1))"
+            fi
+            TAG_NAME="v$VERSION"
+          done
+
+          echo "$VERSION" > VERSION
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+
+          if [[ $VERSION =~ -(alpha|beta|rc)\. ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Sync package.json version
+        run: |
+          jq --arg v "${{ steps.version.outputs.version }}" '.version = $v' package.json > tmp.json
+          mv tmp.json package.json
+
+      - name: Run Tests
+        run: pnpm test:unit
+
+      - name: Compile
+        run: pnpm compile
+
+      - name: Commit & Push
+        run: |
+          git add VERSION package.json
+          git commit -m "chore(release): v${{ steps.version.outputs.version }} [skip ci]" || true
+          git fetch origin main && git rebase origin/main
+          git push origin main
+
+      - name: Create & Push Tag
+        run: |
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}
+
+      - name: Package Extension
+        run: |
+          mkdir -p packages
+          if [ "${{ steps.version.outputs.prerelease }}" = "true" ]; then
+            npx @vscode/vsce package --no-dependencies -o packages/ --pre-release
+          else
+            npx @vscode/vsce package --no-dependencies -o packages/
+          fi
+
+      - name: Publish to VS Marketplace
+        run: |
+          VSIX_FILE=$(ls packages/skillfiles-*.vsix)
+          if [ "${{ steps.version.outputs.prerelease }}" = "true" ]; then
+            npx @vscode/vsce publish --packagePath "$VSIX_FILE" --pre-release -p ${{ secrets.VSCE_PAT }}
+          else
+            npx @vscode/vsce publish --packagePath "$VSIX_FILE" -p ${{ secrets.VSCE_PAT }}
+          fi
+
+      - name: Publish to OpenVSIX
+        run: |
+          VSIX_FILE=$(ls packages/skillfiles-*.vsix)
+          npx ovsx publish "$VSIX_FILE" -p ${{ secrets.OVSX_TOKEN }}
+        continue-on-error: true
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Skillfiles ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: packages/skillfiles-*.vsix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
