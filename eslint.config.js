@@ -25,5 +25,13 @@ export default tseslint.config(
       eqeqeq: 'warn',
       'no-throw-literal': 'warn',
     },
+  },
+  {
+    // Test files
+    files: ['src/test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-expressions': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+    },
   }
 );

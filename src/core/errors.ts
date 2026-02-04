@@ -46,3 +46,11 @@ export class OperationBlockedError extends SkillfilesError {
     this.name = 'OperationBlockedError';
   }
 }
+
+export class AgentProfileNotFoundError extends SkillfilesError {
+  constructor(agent: string) {
+    super(`Agent profile not found: ${agent}`);
+    this.name = 'AgentProfileNotFoundError';
+  }
+}
+

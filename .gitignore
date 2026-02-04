@@ -2,6 +2,9 @@
 out/
 *.vsix
 
+# Test temp
+.test-tmp/
+
 # Dependencies
 node_modules/
 .pnpm-store/
