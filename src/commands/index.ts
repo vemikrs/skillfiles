@@ -1081,8 +1081,109 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
 
         try {
           const config = vscode.workspace.getConfiguration('skillfiles');
-          const scanRoots = config.get<Array<{key: string; path: string}>>('scanRoots') || [];
           const agentProfiles = config.get<Record<string, {vendor: string; skillFolderPath: string; skillFileName: string}>>('agentProfiles') || {};
+          const path = await import('path');
+          const os = await import('os');
+
+          // Different flow for Shared vs Repo skills
+          if (item.skill.scope === 'shared') {
+            // Shared skills: deploy to shared locations
+            const sharedLocations = [
+              { label: 'User Agent Skills', description: '~/.agent/skills/', path: path.join(os.homedir(), '.agent', 'skills') },
+              { label: 'User Skillfiles', description: '~/.skillfiles/skills/', path: path.join(os.homedir(), '.skillfiles', 'skills') }
+            ];
+
+            const selectedLocation = await vscode.window.showQuickPick(sharedLocations, {
+              placeHolder: 'Select shared deployment location',
+              title: `Deploy shared skill: ${item.skill.name}`
+            });
+
+            if (!selectedLocation) {
+              return;
+            }
+
+            // Select agent for shared deployment
+            const agentItems = Object.entries(agentProfiles).map(([name, profile]) => ({
+              label: name,
+              description: profile.vendor,
+              agent: name,
+              profile,
+              picked: name === 'agent'
+            }));
+
+            agentItems.sort((a, b) => {
+              if (a.agent === 'agent') return -1;
+              if (b.agent === 'agent') return 1;
+              return a.label.localeCompare(b.label);
+            });
+
+            const selectedAgent = await vscode.window.showQuickPick(agentItems, {
+              placeHolder: 'Select AI agent',
+              title: 'Which agent format to use?'
+            });
+
+            if (!selectedAgent) {
+              return;
+            }
+
+            const deployPath = path.join(
+              selectedLocation.path,
+              item.skill.name,
+              selectedAgent.profile.skillFileName
+            );
+
+            // Create target for shared skill
+            const newTarget = {
+              skillName: item.skill.name,
+              repoPath: selectedLocation.path,  // Use shared path as "repo path"
+              scanPath: selectedLocation.path,
+              agent: selectedAgent.agent,
+              deployPath
+            };
+
+            const registry = await deps.registryStore.loadRegistry();
+            
+            // Check if target already exists
+            const existingTarget = registry.targets?.find(
+              t => t.skillName === newTarget.skillName && 
+                   t.repoPath === newTarget.repoPath && 
+                   t.agent === newTarget.agent
+            );
+
+            if (existingTarget) {
+              vscode.window.showWarningMessage(`Target already exists: ${item.skill.name} → ${selectedLocation.label}`);
+              return;
+            }
+
+            if (!registry.targets) registry.targets = [];
+            registry.targets.push(newTarget);
+            await deps.registryStore.saveRegistry(registry);
+
+            deps.skillsView.refresh();
+            deps.repoStatusView.refresh();
+
+            // Offer to push immediately
+            const pushNow = await vscode.window.showInformationMessage(
+              `Target added: ${item.skill.name} → ${selectedLocation.label}. Push now?`,
+              'Push', 'Later'
+            );
+
+            if (pushNow === 'Push' && item.skill.folderPath) {
+              await deps.pushService.push({
+                skillName: item.skill.name,
+                skillFolderPath: item.skill.folderPath,
+                deployFolderPath: path.dirname(deployPath),
+                vars: {},
+                context: { agent: selectedAgent.agent, scope: item.skill.scope }
+              });
+              vscode.window.showInformationMessage(`Pushed ${item.skill.name} to ${selectedLocation.label}.`);
+              deps.repoStatusView.refresh();
+            }
+            return;
+          }
+
+          // Repo skills: deploy to repositories
+          const scanRoots = config.get<Array<{key: string; path: string}>>('scanRoots') || [];
 
           if (scanRoots.length === 0) {
             const setup = await vscode.window.showWarningMessage(
@@ -1165,8 +1266,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             return;
           }
 
-          // Compute deploy path
-          const path = await import('path');
+          // Compute deploy path (path already imported above)
           const deployPath = path.join(
             selectedRepo.repo.path,
             selectedAgent.profile.skillFolderPath,
