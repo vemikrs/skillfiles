@@ -1,4 +1,4 @@
-import type { Scope } from './types.js';
+import type { Scope, Registry, Skill, Target } from './types.js';
 
 /**
  * Context for built-in template variables.
@@ -20,6 +20,59 @@ const BUILTIN_VARS = ['AGENT', 'VENDOR', 'SCOPE'];
  */
 export class TemplateEngine {
   private readonly varPattern = /\{\{([A-Z_][A-Z0-9_]*)\}\}/g;
+
+  /**
+   * Resolve variables for a target using the 6-layer hierarchy.
+   * Priority (highest to lowest): Target > Skill > Category > Agent > Repo > Global
+   */
+  resolveVars(
+    target: Target,
+    skill: Skill,
+    registry: Registry
+  ): Record<string, string> {
+    const resolved: Record<string, string> = {};
+
+    // Layer 6 (lowest): Global vars
+    if (registry.globalVars) {
+      Object.assign(resolved, registry.globalVars);
+    }
+
+    // Layer 5: Repo vars
+    if (registry.repoVars && target.repoPath) {
+      const repoVars = registry.repoVars[target.repoPath];
+      if (repoVars) {
+        Object.assign(resolved, repoVars);
+      }
+    }
+
+    // Layer 4: Agent vars
+    if (registry.agentVars && target.agent) {
+      const agentVars = registry.agentVars[target.agent];
+      if (agentVars) {
+        Object.assign(resolved, agentVars);
+      }
+    }
+
+    // Layer 3: Category vars
+    if (registry.categoryVars && skill.category) {
+      const categoryVars = registry.categoryVars[skill.category];
+      if (categoryVars) {
+        Object.assign(resolved, categoryVars);
+      }
+    }
+
+    // Layer 2: Skill default vars
+    if (skill.defaultVars) {
+      Object.assign(resolved, skill.defaultVars);
+    }
+
+    // Layer 1 (highest): Target vars
+    if (target.vars) {
+      Object.assign(resolved, target.vars);
+    }
+
+    return resolved;
+  }
 
   /**
    * Expand template with provided variables and context.
@@ -89,3 +142,4 @@ export class TemplateEngine {
     return this.detectMissingVars(template, vars).length > 0;
   }
 }
+
