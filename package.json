@@ -2,7 +2,7 @@
   "name": "skillfiles",
   "displayName": "Skillfiles",
   "description": "Centrally manage AI agent skill definitions across repositories",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "mi",
   "license": "MIT",
   "type": "module",
