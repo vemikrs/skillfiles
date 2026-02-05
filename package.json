@@ -622,55 +622,55 @@
             "gemini": {
               "vendor": "google",
               "instructionPaths": ["GEMINI.md", ".gemini/styleguide.md"],
-              "skillFolderPath": ".agent/skills",
+              "skillFolderPath": ".gemini/skills",
               "skillFileName": "SKILL.md"
             },
             "copilot": {
               "vendor": "github",
               "instructionPaths": [".github/copilot-instructions.md", "AGENTS.md"],
-              "skillFolderPath": ".agent/skills",
+              "skillFolderPath": ".github/skills",
               "skillFileName": "SKILL.md"
             },
             "claude": {
               "vendor": "anthropic",
               "instructionPaths": ["CLAUDE.md"],
-              "skillFolderPath": ".agent/skills",
+              "skillFolderPath": ".claude/skills",
               "skillFileName": "SKILL.md"
             },
             "codex": {
               "vendor": "openai",
-              "instructionPaths": ["AGENTS.md", "codex.md"],
-              "skillFolderPath": ".agent/skills",
+              "instructionPaths": ["AGENTS.md"],
+              "skillFolderPath": ".agents/skills",
               "skillFileName": "SKILL.md"
             },
             "cursor": {
               "vendor": "anysphere",
               "instructionPaths": [".cursorrules", ".cursor/rules"],
-              "skillFolderPath": ".agent/skills",
+              "skillFolderPath": ".cursor/skills",
               "skillFileName": "SKILL.md"
             },
             "windsurf": {
               "vendor": "codeium",
               "instructionPaths": [".windsurfrules", ".windsurf/rules"],
-              "skillFolderPath": ".agent/skills",
+              "skillFolderPath": ".windsurf/skills",
               "skillFileName": "SKILL.md"
             },
             "cody": {
               "vendor": "sourcegraph",
               "instructionPaths": [".cody/instructions.md"],
-              "skillFolderPath": ".agent/skills",
+              "skillFolderPath": ".cody/skills",
               "skillFileName": "SKILL.md"
             },
             "aider": {
               "vendor": "aider",
               "instructionPaths": ["CONVENTIONS.md", "AGENTS.md"],
-              "skillFolderPath": ".agent/skills",
+              "skillFolderPath": ".aider/skills",
               "skillFileName": "SKILL.md"
             },
             "spring-ai": {
               "vendor": "vmware",
               "instructionPaths": [],
-              "skillFolderPath": ".agent/skills",
+              "skillFolderPath": ".spring-ai/skills",
               "skillFileName": "SKILL.md"
             }
           },
