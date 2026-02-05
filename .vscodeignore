@@ -2,7 +2,6 @@
 .vscode/**
 .vscode-test/**
 src/**
-out/test/**
 .gitignore
 .git/**
 .github/**
@@ -13,7 +12,10 @@ tsconfig.json
 eslint.config.js
 .eslintrc*
 **/*.ts
-!out/**/*.d.ts
+
+# Output files - only keep esbuild bundle
+out/**
+!out/extension.js
 
 # Test files
 **/test/**
@@ -31,5 +33,6 @@ coverage/**
 
 # Documentation (dev only)
 docs/**
+logs/**
 AGENTS.md
 CONTRIBUTING.md

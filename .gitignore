@@ -20,3 +20,6 @@ coverage/
 
 # Development docs (not for Git)
 /docs
+
+# Logs
+/logs
