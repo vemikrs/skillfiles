@@ -180,7 +180,93 @@ export function registerCommands(
     )
   );
 
-  // Open skill command
+  // Copy skill path command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.copySkillPath',
+      async (item?: SkillTreeItem) => {
+        if (!item?.skill.path) {
+          return;
+        }
+        await vscode.env.clipboard.writeText(item.skill.path);
+        vscode.window.showInformationMessage('Skill path copied to clipboard');
+      }
+    )
+  );
+
+  // Delete skill command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.deleteSkill',
+      async (item?: SkillTreeItem) => {
+        if (!item) {
+          return;
+        }
+
+        const confirm = await vscode.window.showWarningMessage(
+          `Delete skill "${item.skill.name}"? This cannot be undone.`,
+          { modal: true },
+          'Delete'
+        );
+
+        if (confirm !== 'Delete') {
+          return;
+        }
+
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          const skillIndex = registry.skills.findIndex(s => s.name === item.skill.name);
+          
+          if (skillIndex === -1) {
+            vscode.window.showErrorMessage('Skill not found');
+            return;
+          }
+
+          // Remove skill from registry
+          registry.skills.splice(skillIndex, 1);
+          
+          // Remove related targets
+          if (registry.targets) {
+            registry.targets = registry.targets.filter(t => t.skillName !== item.skill.name);
+          }
+
+          await deps.registryStore.saveRegistry(registry);
+          
+          // Delete skill files if they exist
+          if (item.skill.path) {
+            const fs = await import('fs/promises');
+            const path = await import('path');
+            const skillDir = path.dirname(item.skill.path);
+            try {
+              await fs.rm(skillDir, { recursive: true });
+            } catch {
+              // Files may not exist
+            }
+          }
+
+          deps.skillsView.refresh();
+          deps.repoStatusView.refresh();
+          vscode.window.showInformationMessage(`Deleted skill "${item.skill.name}"`);
+        } catch (error) {
+          vscode.window.showErrorMessage(`Delete failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Copy target path command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.copyTargetPath',
+      async (item?: TargetTreeItem) => {
+        if (!item?.target.deployPath) {
+          return;
+        }
+        await vscode.env.clipboard.writeText(item.target.deployPath);
+        vscode.window.showInformationMessage('Target path copied to clipboard');
+      }
+    )
+  );
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'skillfiles.openSkill',
@@ -209,7 +295,14 @@ export function registerCommands(
       async () => {
         const skillName = await vscode.window.showInputBox({
           prompt: 'Enter new skill name',
-          placeHolder: 'my-coding-assistant'
+          placeHolder: 'my-coding-assistant',
+          validateInput: (value) => {
+            if (!value) {return 'Skill name is required';}
+            if (!/^[a-z0-9-]+$/.test(value)) {
+              return 'Use lowercase letters, numbers, and hyphens only';
+            }
+            return null;
+          }
         });
 
         if (!skillName) {
@@ -217,7 +310,7 @@ export function registerCommands(
         }
 
         try {
-          const registry = await deps.registryStore.loadRegistry();
+          const registry = await deps.registryStore.loadOrCreateRegistry();
           
           // Validate name
           if (registry.skills.find(s => s.name === skillName)) {
@@ -225,6 +318,17 @@ export function registerCommands(
             return;
           }
 
+          // Get registry root path
+          const config = vscode.workspace.getConfiguration('skillfiles');
+          const registryPath = config.get<string>('registryPath') || '~/.skillfiles';
+          const registryRoot = registryPath.replace(/^~/, process.env.HOME || '');
+          
+          // Create skill directory and file
+          const fs = await import('fs/promises');
+          const path = await import('path');
+          const skillDir = path.join(registryRoot, 'skills', skillName);
+          const skillFilePath = path.join(skillDir, 'skill.md');
+          
           // Create skill template
           const content = `# ${skillName}
 
@@ -234,17 +338,36 @@ Write your skill instructions here.
 
 - Be specific about the behavior you want
 - Include examples when helpful
+
+## Template Variables
+
+You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
 `;
 
-          const doc = await vscode.workspace.openTextDocument({
-            content,
-            language: 'markdown'
-          });
+          // Create directory and write file
+          await fs.mkdir(skillDir, { recursive: true });
+          await fs.writeFile(skillFilePath, content, 'utf-8');
           
+          // Register in registry
+          const newSkill = {
+            name: skillName,
+            scope: 'repo' as const,
+            registryPath: `skills/${skillName}/skill.md`,
+            path: skillFilePath,
+            targets: []
+          };
+          registry.skills.push(newSkill);
+          await deps.registryStore.saveRegistry(registry);
+          
+          // Open the file in editor
+          const doc = await vscode.workspace.openTextDocument(skillFilePath);
           await vscode.window.showTextDocument(doc);
           
+          // Refresh views
+          deps.skillsView.refresh();
+          
           vscode.window.showInformationMessage(
-            `Creating ${skillName}. Save the file to register it.`
+            `Created skill "${skillName}" and registered in registry.`
           );
         } catch (error) {
           vscode.window.showErrorMessage(`Create failed: ${error}`);
@@ -400,6 +523,209 @@ Write your skill instructions here.
           await vscode.window.showTextDocument(doc, { preview: true });
         } catch (error) {
           vscode.window.showErrorMessage(`Open audit log failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Setup scan roots command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.setupScanRoots',
+      async () => {
+        const folders = await vscode.window.showOpenDialog({
+          canSelectFiles: false,
+          canSelectFolders: true,
+          canSelectMany: true,
+          openLabel: 'Select Scan Root',
+          title: 'Select directories containing your repositories'
+        });
+
+        if (!folders || folders.length === 0) {
+          return;
+        }
+
+        try {
+          const config = vscode.workspace.getConfiguration('skillfiles');
+          const existingRoots = config.get<Array<{key: string; path: string}>>('scanRoots') || [];
+          
+          const newRoots = folders.map(folder => {
+            const folderPath = folder.fsPath;
+            const folderName = folderPath.split('/').pop() || 'root';
+            return {
+              key: folderName,
+              path: folderPath
+            };
+          });
+
+          // Merge with existing, avoiding duplicates
+          const mergedRoots = [...existingRoots];
+          for (const newRoot of newRoots) {
+            if (!mergedRoots.some(r => r.path === newRoot.path)) {
+              mergedRoots.push(newRoot);
+            }
+          }
+
+          await config.update('scanRoots', mergedRoots, vscode.ConfigurationTarget.Global);
+          
+          vscode.window.showInformationMessage(
+            `Added ${newRoots.length} scan root(s). Total: ${mergedRoots.length}`
+          );
+          
+          // Offer to discover skills
+          const discover = await vscode.window.showInformationMessage(
+            'Would you like to scan for existing skills now?',
+            'Yes', 'No'
+          );
+          if (discover === 'Yes') {
+            await vscode.commands.executeCommand('skillfiles.discoverSkills');
+          }
+        } catch (error) {
+          vscode.window.showErrorMessage(`Setup failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Discover skills command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.discoverSkills',
+      async () => {
+        const config = vscode.workspace.getConfiguration('skillfiles');
+        const scanRoots = config.get<Array<{key: string; path: string}>>('scanRoots') || [];
+
+        if (scanRoots.length === 0) {
+          const setup = await vscode.window.showWarningMessage(
+            'No scan roots configured. Set up scan roots first?',
+            'Setup Scan Roots', 'Cancel'
+          );
+          if (setup === 'Setup Scan Roots') {
+            await vscode.commands.executeCommand('skillfiles.setupScanRoots');
+          }
+          return;
+        }
+
+        try {
+          // Import RepoScanner dynamically
+          const { RepoScanner } = await import('../core/repo-scanner.js');
+          const scanner = new RepoScanner(scanRoots);
+
+          await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Scanning repositories...',
+            cancellable: false
+          }, async (progress) => {
+            // Scan for repos
+            progress.report({ message: 'Finding repositories...' });
+            const repos = await scanner.scan();
+            
+            if (repos.length === 0) {
+              vscode.window.showInformationMessage('No repositories found in scan roots.');
+              return;
+            }
+
+            // Detect skill files in each repo
+            progress.report({ message: `Checking ${repos.length} repositories for skills...` });
+            
+            interface DiscoveredSkill {
+              repoName: string;
+              repoPath: string;
+              agent: string;
+              skillPath: string;
+            }
+            
+            const discoveredSkills: DiscoveredSkill[] = [];
+            
+            for (const repo of repos) {
+              const skillFiles = await scanner.detectSkillFiles(repo.path);
+              for (const skillFile of skillFiles) {
+                discoveredSkills.push({
+                  repoName: repo.name,
+                  repoPath: repo.path,
+                  agent: skillFile.agent,
+                  skillPath: skillFile.path
+                });
+              }
+            }
+
+            if (discoveredSkills.length === 0) {
+              vscode.window.showInformationMessage(
+                `Scanned ${repos.length} repositories. No skill files found.`
+              );
+              return;
+            }
+
+            // Show quick pick to select skills to import
+            const items = discoveredSkills.map(skill => ({
+              label: `${skill.repoName}`,
+              description: `${skill.agent}`,
+              detail: skill.skillPath,
+              skill
+            }));
+
+            const selected = await vscode.window.showQuickPick(items, {
+              canPickMany: true,
+              placeHolder: 'Select skills to import into registry',
+              title: `Found ${discoveredSkills.length} skill(s)`
+            });
+
+            if (!selected || selected.length === 0) {
+              return;
+            }
+
+            // Import selected skills
+            const fs = await import('fs/promises');
+            const path = await import('path');
+            const registry = await deps.registryStore.loadOrCreateRegistry();
+            const registryPath = config.get<string>('registryPath') || '~/.skillfiles';
+            const registryRoot = registryPath.replace(/^~/, process.env.HOME || '');
+            
+            let importCount = 0;
+            for (const item of selected) {
+              const { skill } = item;
+              const skillName = `${skill.repoName}-${skill.agent}`;
+              
+              // Check if already exists
+              if (registry.skills.find(s => s.name === skillName)) {
+                continue;
+              }
+
+              // Copy skill file to registry
+              const skillDir = path.join(registryRoot, 'skills', skillName);
+              const skillFilePath = path.join(skillDir, 'skill.md');
+              
+              await fs.mkdir(skillDir, { recursive: true });
+              await fs.copyFile(skill.skillPath, skillFilePath);
+              
+              // Add to registry
+              registry.skills.push({
+                name: skillName,
+                scope: 'repo',
+                registryPath: `skills/${skillName}/skill.md`,
+                path: skillFilePath,
+                targets: [{
+                  skillName,
+                  repoPath: skill.repoPath,
+                  scanPath: skill.repoPath,
+                  agent: skill.agent,
+                  deployPath: skill.skillPath
+                }]
+              });
+              
+              importCount++;
+            }
+
+            await deps.registryStore.saveRegistry(registry);
+            deps.skillsView.refresh();
+            deps.repoStatusView.refresh();
+            
+            vscode.window.showInformationMessage(
+              `Imported ${importCount} skill(s) from ${selected.length} selected.`
+            );
+          });
+        } catch (error) {
+          vscode.window.showErrorMessage(`Discovery failed: ${error}`);
         }
       }
     )
