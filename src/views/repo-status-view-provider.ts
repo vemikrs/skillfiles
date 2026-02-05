@@ -42,7 +42,7 @@ export class TargetTreeItem extends vscode.TreeItem {
     public readonly collapsibleState: vscode.TreeItemCollapsibleState
   ) {
     super(target.skillName, collapsibleState);
-    this.tooltip = `Agent: ${target.agent}`;
+    this.tooltip = `Agent: ${target.agent}\nPath: ${target.deployPath || 'Not set'}`;
     this.contextValue = `target-${target.status}`;
     
     // Icon based on status
@@ -50,12 +50,28 @@ export class TargetTreeItem extends vscode.TreeItem {
       'synced': 'check',
       'modified': 'diff',
       'missing': 'warning',
-      'needs-vars': 'question'
+      'needs-vars': 'variable'
     };
     this.iconPath = new vscode.ThemeIcon(iconMap[target.status]);
-    this.description = target.status;
+    
+    // Description: show agent, and status if not synced
+    if (target.status === 'synced') {
+      this.description = target.agent;
+    } else if (target.status === 'needs-vars' && target.missingVars?.length) {
+      this.description = `${target.agent} • Missing: ${target.missingVars.join(', ')}`;
+    } else {
+      this.description = `${target.agent} • ${target.status}`;
+    }
+
+    // Click to open target file
+    this.command = {
+      command: 'skillfiles.openTarget',
+      title: 'Open Target',
+      arguments: [this]
+    };
   }
 }
+
 
 type RepoStatusTreeElement = RepoTreeItem | TargetTreeItem;
 
@@ -133,23 +149,34 @@ export class RepoStatusViewProvider implements vscode.TreeDataProvider<RepoStatu
       return 'missing';
     }
 
-    // Check if template needs vars
-    if (this.templateEngine.needsVars(skill.template || '', target.vars || {})) {
-      return 'needs-vars';
-    }
-
     // Check if deployed file exists
     if (!target.deployPath) {
       return 'missing';
+    }
+
+    // Read skill template from file (not from skill.template property which may be empty)
+    let templateContent = skill.template || '';
+    if (skill.path) {
+      try {
+        templateContent = await fs.readFile(skill.path, 'utf-8');
+      } catch {
+        // Skill file doesn't exist
+        return 'missing';
+      }
+    }
+
+    // Check if template needs vars
+    if (this.templateEngine.needsVars(templateContent, target.vars || {})) {
+      return 'needs-vars';
     }
 
     try {
       const deployedContent = await fs.readFile(target.deployPath, 'utf-8');
       const deployedHash = computeHash(deployedContent);
       
-      // Compare with registry hash
+      // Compare with registry hash (expanded template)
       const registryContent = this.templateEngine.expand(
-        skill.template || '',
+        templateContent,
         target.vars || {},
         { agent: target.agent, scope: skill.scope }
       );
