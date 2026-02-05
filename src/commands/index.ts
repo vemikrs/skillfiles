@@ -5,8 +5,9 @@ import type { RollbackService } from '../services/rollback-service.js';
 import type { HistoryManager } from '../core/history-manager.js';
 import type { RegistryStore } from '../core/registry-store.js';
 import type { SkillsViewProvider, SkillTreeItem } from '../views/skills-view-provider.js';
-import type { RepoStatusViewProvider, TargetTreeItem } from '../views/repo-status-view-provider.js';
+import type { RepoStatusViewProvider, TargetTreeItem, RepoTreeItem } from '../views/repo-status-view-provider.js';
 import type { HistoryViewProvider, SnapshotTreeItem } from '../views/history-view-provider.js';
+import type { VariablesViewProvider, VariableTreeItem, DefaultVariableTreeItem } from '../views/variables-view-provider.js';
 
 /**
  * Dependencies for command handlers.
@@ -20,6 +21,7 @@ export interface CommandDependencies {
   skillsView: SkillsViewProvider;
   repoStatusView: RepoStatusViewProvider;
   historyView: HistoryViewProvider;
+  variablesView: VariablesViewProvider;
 }
 
 /**
@@ -47,41 +49,82 @@ export function registerCommands(
     })
   );
 
-  // Push command
+  // Push command - supports both SkillTreeItem and TargetTreeItem
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'skillfiles.pushSkill',
-      async (item?: TargetTreeItem) => {
+      async (item?: TargetTreeItem | SkillTreeItem) => {
         if (!item) {
-          vscode.window.showErrorMessage('Please select a target to push.');
+          vscode.window.showErrorMessage('Please select a skill or target to push.');
           return;
         }
 
         try {
           const registry = await deps.registryStore.loadRegistry();
-          const skill = registry.skills.find(s => s.name === item.target.skillName);
-          
-          if (!skill) {
-            vscode.window.showErrorMessage(`Skill not found: ${item.target.skillName}`);
-            return;
+
+          // Check if this is a SkillTreeItem (has 'skill' property)
+          if ('skill' in item) {
+            // SkillTreeItem: push to all targets for this skill
+            const skillItem = item as SkillTreeItem;
+            const targets = registry.targets?.filter(t => t.skillName === skillItem.skill.name) || [];
+            
+            if (targets.length === 0) {
+              vscode.window.showWarningMessage(`No targets registered for skill: ${skillItem.skill.name}`);
+              return;
+            }
+
+            let pushCount = 0;
+            let errorCount = 0;
+
+            for (const target of targets) {
+              try {
+                if (!skillItem.skill.path || !target.deployPath) {continue;}
+
+                await deps.pushService.push({
+                  skillName: skillItem.skill.name,
+                  skillPath: skillItem.skill.path,
+                  deployPath: target.deployPath,
+                  vars: target.vars || {},
+                  context: { agent: target.agent, scope: skillItem.skill.scope }
+                });
+                pushCount++;
+              } catch {
+                errorCount++;
+              }
+            }
+
+            vscode.window.showInformationMessage(
+              `Pushed ${skillItem.skill.name} to ${pushCount} target(s). ${errorCount} failed.`
+            );
+            deps.repoStatusView.refresh();
+          } else {
+            // TargetTreeItem: push to single target
+            const targetItem = item as TargetTreeItem;
+            const skill = registry.skills.find(s => s.name === targetItem.target.skillName);
+            
+            if (!skill) {
+              vscode.window.showErrorMessage(`Skill not found: ${targetItem.target.skillName}`);
+              return;
+            }
+
+            await deps.pushService.push({
+              skillName: targetItem.target.skillName,
+              skillPath: skill.path || '',
+              deployPath: targetItem.target.deployPath ?? '',
+              vars: targetItem.target.vars || {},
+              context: { agent: targetItem.target.agent, scope: skill.scope }
+            });
+
+            vscode.window.showInformationMessage(`Pushed ${targetItem.target.skillName} successfully.`);
+            deps.repoStatusView.refresh();
           }
-
-          await deps.pushService.push({
-            skillName: item.target.skillName,
-            skillPath: skill.path || '',
-            deployPath: item.target.deployPath ?? '',
-            vars: item.target.vars || {},
-            context: { agent: item.target.agent, scope: skill.scope }
-          });
-
-          vscode.window.showInformationMessage(`Pushed ${item.target.skillName} successfully.`);
-          deps.repoStatusView.refresh();
         } catch (error) {
           vscode.window.showErrorMessage(`Push failed: ${error}`);
         }
       }
     )
   );
+
 
   // Collect command
   context.subscriptions.push(
@@ -638,13 +681,13 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             const discoveredSkills: DiscoveredSkill[] = [];
             
             for (const repo of repos) {
-              const skillFiles = await scanner.detectSkillFiles(repo.path);
-              for (const skillFile of skillFiles) {
+              const skillFolders = await scanner.detectSkillFolders(repo.path);
+              for (const skillFolder of skillFolders) {
                 discoveredSkills.push({
                   repoName: repo.name,
                   repoPath: repo.path,
-                  agent: skillFile.agent,
-                  skillPath: skillFile.path
+                  agent: skillFolder.agent,
+                  skillPath: skillFolder.path
                 });
               }
             }
@@ -726,6 +769,563 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           });
         } catch (error) {
           vscode.window.showErrorMessage(`Discovery failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Open target file command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.openTarget',
+      async (item?: TargetTreeItem) => {
+        if (!item?.target.deployPath) {
+          vscode.window.showWarningMessage('No deploy path set for this target.');
+          return;
+        }
+
+        try {
+          const doc = await vscode.workspace.openTextDocument(item.target.deployPath);
+          await vscode.window.showTextDocument(doc);
+        } catch (error) {
+          vscode.window.showErrorMessage(`Could not open target file: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Push all skills in repo command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.pushAllInRepo',
+      async (item?: RepoTreeItem) => {
+        if (!item) {
+          vscode.window.showErrorMessage('Please select a repository.');
+          return;
+        }
+
+        const confirm = await vscode.window.showWarningMessage(
+          `Push all ${item.targets.length} skills in ${item.repoPath}?`,
+          'Yes',
+          'Cancel'
+        );
+
+        if (confirm !== 'Yes') {
+          return;
+        }
+
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          let pushCount = 0;
+          let errorCount = 0;
+
+          for (const target of item.targets) {
+            try {
+              const skill = registry.skills.find(s => s.name === target.skillName);
+              if (!skill?.path || !target.deployPath) {continue;}
+
+              await deps.pushService.push({
+                skillName: target.skillName,
+                skillPath: skill.path,
+                deployPath: target.deployPath,
+                vars: target.vars || {},
+                context: { agent: target.agent, scope: skill.scope }
+              });
+              pushCount++;
+            } catch {
+              errorCount++;
+            }
+          }
+
+          deps.repoStatusView.refresh();
+          vscode.window.showInformationMessage(
+            `Pushed ${pushCount} skills in ${item.repoPath}. ${errorCount} failed.`
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage(`Push all failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Collect all skills in repo command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.collectAllInRepo',
+      async (item?: RepoTreeItem) => {
+        if (!item) {
+          vscode.window.showErrorMessage('Please select a repository.');
+          return;
+        }
+
+        const confirm = await vscode.window.showWarningMessage(
+          `Collect all ${item.targets.length} skills from ${item.repoPath}?`,
+          'Yes',
+          'Cancel'
+        );
+
+        if (confirm !== 'Yes') {
+          return;
+        }
+
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          let collectCount = 0;
+          let errorCount = 0;
+
+          for (const target of item.targets) {
+            try {
+              const skill = registry.skills.find(s => s.name === target.skillName);
+              if (!skill?.path || !target.deployPath) {continue;}
+
+              await deps.collectService.collect({
+                skillName: target.skillName,
+                sourcePath: target.deployPath,
+                registryRoot: skill.path.replace(/\/skills\/.*$/, '')
+              });
+              collectCount++;
+            } catch {
+              errorCount++;
+            }
+          }
+
+          deps.skillsView.refresh();
+          deps.historyView.refresh();
+          vscode.window.showInformationMessage(
+            `Collected ${collectCount} skills from ${item.repoPath}. ${errorCount} failed.`
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage(`Collect all failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Clear history command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.clearHistory',
+      async () => {
+        const confirm = await vscode.window.showWarningMessage(
+          'Clear all history snapshots? This cannot be undone.',
+          { modal: true },
+          'Clear All'
+        );
+
+        if (confirm !== 'Clear All') {
+          return;
+        }
+
+        try {
+          const config = vscode.workspace.getConfiguration('skillfiles');
+          const registryPath = config.get<string>('registryPath') || '~/.skillfiles';
+          const expandedPath = registryPath.replace(/^~/, process.env.HOME || '');
+          
+          const fs = await import('fs/promises');
+          const historyPath = `${expandedPath}/history`;
+          
+          try {
+            await fs.rm(historyPath, { recursive: true });
+            await fs.mkdir(historyPath, { recursive: true });
+          } catch {
+            // History directory may not exist
+          }
+          
+          deps.historyView.refresh();
+          vscode.window.showInformationMessage('History cleared.');
+        } catch (error) {
+          vscode.window.showErrorMessage(`Clear history failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Show snapshot diff command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.showSnapshotDiff',
+      async (item?: SnapshotTreeItem) => {
+        if (!item) {
+          vscode.window.showWarningMessage('Select a snapshot to show diff.');
+          return;
+        }
+
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          const skill = registry.skills.find(s => s.name === item.skillName);
+          
+          if (!skill?.path) {
+            vscode.window.showErrorMessage('Skill not found.');
+            return;
+          }
+
+          // Get snapshot content
+          const snapshotContent = await deps.historyManager.restoreSnapshot(
+            item.skillName,
+            item.snapshot.id
+          );
+          
+          // Create temp document for snapshot
+          const snapshotDoc = await vscode.workspace.openTextDocument({
+            content: snapshotContent,
+            language: 'markdown'
+          });
+          
+          const currentUri = vscode.Uri.file(skill.path);
+          
+          await vscode.commands.executeCommand(
+            'vscode.diff',
+            snapshotDoc.uri,
+            currentUri,
+            `${item.skillName}: Snapshot (${item.snapshot.id.substring(0, 8)}) ↔ Current`
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage(`Show diff failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Add target to skill command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.addTarget',
+      async (item?: SkillTreeItem) => {
+        if (!item) {
+          vscode.window.showErrorMessage('Please select a skill to add a target.');
+          return;
+        }
+
+        try {
+          const config = vscode.workspace.getConfiguration('skillfiles');
+          const scanRoots = config.get<Array<{key: string; path: string}>>('scanRoots') || [];
+          const agentProfiles = config.get<Record<string, {vendor: string; skillFolderPath: string; skillFileName: string}>>('agentProfiles') || {};
+
+          if (scanRoots.length === 0) {
+            const setup = await vscode.window.showWarningMessage(
+              'No scan roots configured. Set up scan roots first?',
+              'Setup Scan Roots', 'Cancel'
+            );
+            if (setup === 'Setup Scan Roots') {
+              await vscode.commands.executeCommand('skillfiles.setupScanRoots');
+            }
+            return;
+          }
+
+          // Import RepoScanner to find repositories
+          const { RepoScanner } = await import('../core/repo-scanner.js');
+          const scanner = new RepoScanner(scanRoots);
+
+          // Scan for repositories
+          const repos = await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Scanning for repositories...',
+            cancellable: false
+          }, async () => {
+            return await scanner.scan();
+          });
+
+          if (repos.length === 0) {
+            vscode.window.showWarningMessage('No repositories found in scan roots.');
+            return;
+          }
+
+          // Let user select a repository
+          const repoItems = repos.map(repo => ({
+            label: repo.name,
+            description: repo.path,
+            repo
+          }));
+
+          const selectedRepo = await vscode.window.showQuickPick(repoItems, {
+            placeHolder: 'Select target repository',
+            title: `Add target for skill: ${item.skill.name}`
+          });
+
+          if (!selectedRepo) {
+            return;
+          }
+
+          // Let user select an agent
+          const agentItems = Object.entries(agentProfiles).map(([name, profile]) => ({
+            label: name,
+            description: profile.vendor,
+            detail: `Deploy to: ${profile.skillFolderPath}/${item.skill.name}/${profile.skillFileName}`,
+            agent: name,
+            profile
+          }));
+
+          const selectedAgent = await vscode.window.showQuickPick(agentItems, {
+            placeHolder: 'Select AI agent',
+            title: 'Which agent should use this skill?'
+          });
+
+          if (!selectedAgent) {
+            return;
+          }
+
+          // Compute deploy path
+          const path = await import('path');
+          const deployPath = path.join(
+            selectedRepo.repo.path,
+            selectedAgent.profile.skillFolderPath,
+            item.skill.name,
+            selectedAgent.profile.skillFileName
+          );
+
+          // Create target
+          const newTarget = {
+            skillName: item.skill.name,
+            repoPath: selectedRepo.repo.path,
+            scanPath: selectedRepo.repo.path,
+            agent: selectedAgent.agent,
+            deployPath
+          };
+
+          // Add to registry
+          const registry = await deps.registryStore.loadRegistry();
+          
+          // Check if target already exists
+          const existingTarget = registry.targets?.find(
+            t => t.skillName === newTarget.skillName && 
+                 t.repoPath === newTarget.repoPath && 
+                 t.agent === newTarget.agent
+          );
+
+          if (existingTarget) {
+            vscode.window.showWarningMessage(
+              `Target already exists: ${item.skill.name} → ${selectedRepo.repo.name} (${selectedAgent.agent})`
+            );
+            return;
+          }
+
+          // Add target to registry
+          if (!registry.targets) {
+            registry.targets = [];
+          }
+          registry.targets.push(newTarget);
+          
+          await deps.registryStore.saveRegistry(registry);
+
+          // Refresh views
+          deps.skillsView.refresh();
+          deps.repoStatusView.refresh();
+
+          // Offer to push immediately
+          const pushNow = await vscode.window.showInformationMessage(
+            `Target added: ${item.skill.name} → ${selectedRepo.repo.name} (${selectedAgent.agent}). Push now?`,
+            'Push', 'Later'
+          );
+
+          if (pushNow === 'Push') {
+            if (!item.skill.path) {
+              vscode.window.showErrorMessage('Skill path not set.');
+              return;
+            }
+
+            await deps.pushService.push({
+              skillName: item.skill.name,
+              skillPath: item.skill.path,
+              deployPath,
+              vars: {},
+              context: { agent: selectedAgent.agent, scope: item.skill.scope }
+            });
+
+            vscode.window.showInformationMessage(`Pushed ${item.skill.name} to ${selectedRepo.repo.name}.`);
+            deps.repoStatusView.refresh();
+          }
+        } catch (error) {
+          vscode.window.showErrorMessage(`Add target failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Remove target command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.removeTarget',
+      async (item?: TargetTreeItem) => {
+        if (!item) {
+          vscode.window.showErrorMessage('Please select a target to remove.');
+          return;
+        }
+
+        const options = ['Remove Target Only', 'Remove Target and File', 'Cancel'];
+        const choice = await vscode.window.showWarningMessage(
+          `Remove target: ${item.target.skillName} from ${item.target.repoPath}?`,
+          { modal: true },
+          ...options
+        );
+
+        if (!choice || choice === 'Cancel') {
+          return;
+        }
+
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          
+          // Find and remove the target
+          const targetIndex = registry.targets?.findIndex(
+            t => t.skillName === item.target.skillName &&
+                 t.repoPath === item.target.repoPath &&
+                 t.agent === item.target.agent
+          );
+
+          if (targetIndex === undefined || targetIndex === -1) {
+            vscode.window.showErrorMessage('Target not found in registry.');
+            return;
+          }
+
+          registry.targets?.splice(targetIndex, 1);
+          await deps.registryStore.saveRegistry(registry);
+
+          // Optionally delete the deployed file
+          if (choice === 'Remove Target and File' && item.target.deployPath) {
+            try {
+              const fs = await import('fs/promises');
+              await fs.unlink(item.target.deployPath);
+            } catch {
+              // File may not exist
+            }
+          }
+
+          deps.repoStatusView.refresh();
+          vscode.window.showInformationMessage(
+            `Removed target: ${item.target.skillName} (${item.target.agent})`
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage(`Remove target failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Refresh variables command
+  context.subscriptions.push(
+    vscode.commands.registerCommand('skillfiles.refreshVariables', () => {
+      deps.variablesView.refresh();
+    })
+  );
+
+  // Edit variable command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.editVariable',
+      async (item?: VariableTreeItem) => {
+        if (!item) {
+          vscode.window.showErrorMessage('Please select a variable to edit.');
+          return;
+        }
+
+        const newValue = await vscode.window.showInputBox({
+          prompt: `Enter value for ${item.varName}`,
+          value: item.varValue || '',
+          placeHolder: `Value for ${item.varName}`
+        });
+
+        if (newValue === undefined) {
+          return; // Cancelled
+        }
+
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          
+          // Find the target in registry
+          const targetIndex = registry.targets?.findIndex(
+            t => t.skillName === item.target.skillName &&
+                 t.repoPath === item.target.repoPath &&
+                 t.agent === item.target.agent
+          );
+
+          if (targetIndex === undefined || targetIndex === -1 || !registry.targets) {
+            vscode.window.showErrorMessage('Target not found in registry.');
+            return;
+          }
+
+          // Update or add the variable
+          if (!registry.targets[targetIndex].vars) {
+            registry.targets[targetIndex].vars = {};
+          }
+          
+          if (newValue === '') {
+            // Remove the variable if empty
+            delete registry.targets[targetIndex].vars![item.varName];
+          } else {
+            registry.targets[targetIndex].vars![item.varName] = newValue;
+          }
+
+          await deps.registryStore.saveRegistry(registry);
+
+          // Refresh views
+          deps.variablesView.refresh();
+          deps.repoStatusView.refresh();
+
+          vscode.window.showInformationMessage(
+            `Updated ${item.varName} = "${newValue}" for ${item.target.skillName}`
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage(`Edit variable failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Edit default variable command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.editDefaultVariable',
+      async (item?: DefaultVariableTreeItem) => {
+        if (!item) {
+          vscode.window.showErrorMessage('Please select a default variable to edit.');
+          return;
+        }
+
+        const newValue = await vscode.window.showInputBox({
+          prompt: `Enter default value for ${item.varName}`,
+          value: item.varValue || '',
+          placeHolder: `Default value for ${item.varName}`
+        });
+
+        if (newValue === undefined) {
+          return; // Cancelled
+        }
+
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          
+          // Find the skill
+          const skillIndex = registry.skills.findIndex(s => s.name === item.skill.name);
+
+          if (skillIndex === -1) {
+            vscode.window.showErrorMessage('Skill not found in registry.');
+            return;
+          }
+
+          // Update or add the default variable
+          if (!registry.skills[skillIndex].defaultVars) {
+            registry.skills[skillIndex].defaultVars = {};
+          }
+          
+          if (newValue === '') {
+            // Remove the variable if empty
+            delete registry.skills[skillIndex].defaultVars![item.varName];
+          } else {
+            registry.skills[skillIndex].defaultVars![item.varName] = newValue;
+          }
+
+          await deps.registryStore.saveRegistry(registry);
+
+          // Refresh views
+          deps.variablesView.refresh();
+          deps.repoStatusView.refresh();
+          deps.skillsView.refresh();
+
+          vscode.window.showInformationMessage(
+            `Updated default ${item.varName} = "${newValue}" for skill ${item.skill.name}`
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage(`Edit default variable failed: ${error}`);
         }
       }
     )
