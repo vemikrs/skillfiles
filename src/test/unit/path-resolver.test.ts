@@ -53,32 +53,32 @@ describe('PathResolver', () => {
     });
   });
 
-  describe('resolveDeployPath', () => {
-    it('should resolve deployPath using skill folder structure', () => {
+  describe('resolveDeployFolderPath', () => {
+    it('should resolve deployFolderPath using skill folder structure', () => {
       const resolver = new PathResolver(sampleRegistry, scanRoots, '/Users/mi/.skillfiles');
       const repoRoot = '/Users/mi/work/myproject';
-      const result = resolver.resolveDeployPath(repoRoot, 'copilot', 'my-skill', undefined);
-      expect(result).to.equal('/Users/mi/work/myproject/.github/skills/my-skill/SKILL.md');
+      const result = resolver.resolveDeployFolderPath(repoRoot, 'copilot', 'my-skill', undefined);
+      expect(result).to.equal('/Users/mi/work/myproject/.github/skills/my-skill');
     });
 
     it('should use agentProfile skillFolderPath when deployPath omitted', () => {
       const resolver = new PathResolver(sampleRegistry, scanRoots, '/Users/mi/.skillfiles');
       const repoRoot = '/Users/mi/work/myproject';
-      const result = resolver.resolveDeployPath(repoRoot, 'claude', 'my-skill', undefined);
-      expect(result).to.equal('/Users/mi/work/myproject/.claude/skills/my-skill/SKILL.md');
+      const result = resolver.resolveDeployFolderPath(repoRoot, 'claude', 'my-skill', undefined);
+      expect(result).to.equal('/Users/mi/work/myproject/.claude/skills/my-skill');
     });
 
     it('should use explicit deployPath when provided', () => {
       const resolver = new PathResolver(sampleRegistry, scanRoots, '/Users/mi/.skillfiles');
       const repoRoot = '/Users/mi/work/myproject';
-      const result = resolver.resolveDeployPath(repoRoot, 'copilot', 'my-skill', 'custom/skill.md');
-      expect(result).to.equal('/Users/mi/work/myproject/custom/skill.md');
+      const result = resolver.resolveDeployFolderPath(repoRoot, 'copilot', 'my-skill', 'custom/skill');
+      expect(result).to.equal('/Users/mi/work/myproject/custom/skill');
     });
 
     it('should throw when agent not found in registry', () => {
       const resolver = new PathResolver(sampleRegistry, scanRoots, '/Users/mi/.skillfiles');
       const repoRoot = '/Users/mi/work/myproject';
-      expect(() => resolver.resolveDeployPath(repoRoot, 'unknown', 'my-skill', undefined))
+      expect(() => resolver.resolveDeployFolderPath(repoRoot, 'unknown', 'my-skill', undefined))
         .to.throw('Agent profile not found: unknown');
     });
   });
@@ -106,17 +106,17 @@ describe('PathResolver', () => {
     });
   });
 
-  describe('resolveSkillPath', () => {
-    it('should resolve skill path within registry', () => {
+  describe('resolveSkillFolderPathInRegistry', () => {
+    it('should resolve skill folder path within registry', () => {
       const resolver = new PathResolver(sampleRegistry, scanRoots, '/Users/mi/.skillfiles');
-      const result = resolver.resolveSkillPath('my-skill', 'repo');
-      expect(result).to.equal('/Users/mi/.skillfiles/skills/my-skill/skill.md');
+      const result = resolver.resolveSkillFolderPathInRegistry('my-skill', 'repo');
+      expect(result).to.equal('/Users/mi/.skillfiles/skills/my-skill');
     });
 
-    it('should resolve skill path within shared root', () => {
+    it('should resolve skill folder path within shared root', () => {
       const resolver = new PathResolver(sampleRegistry, scanRoots, '/Users/mi/.skillfiles', '/Users/mi/.agents');
-      const result = resolver.resolveSkillPath('shared-skill', 'shared');
-      expect(result).to.equal('/Users/mi/.agents/skills/shared-skill/skill.md');
+      const result = resolver.resolveSkillFolderPathInRegistry('shared-skill', 'shared');
+      expect(result).to.equal('/Users/mi/.agents/skills/shared-skill');
     });
   });
 });
