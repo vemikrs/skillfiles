@@ -1323,7 +1323,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
         }
 
         const newValue = await vscode.window.showInputBox({
-          prompt: `Enter value for ${item.varName} (${item.level}${item.levelKey ? `: ${item.levelKey}` : ''})`,
+          prompt: `Enter value for ${item.varName} (${item.section}${item.groupKey ? `: ${item.groupKey}` : ''})`,
           value: item.varValue || '',
           placeHolder: `Value for ${item.varName}`
         });
@@ -1335,7 +1335,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
         try {
           const registry = await deps.registryStore.loadRegistry();
           
-          switch (item.level) {
+          switch (item.section) {
             case 'global': {
               if (!registry.globalVars) registry.globalVars = {};
               if (newValue === '') {
@@ -1348,7 +1348,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             
             case 'repo': {
               if (!registry.repoVars) registry.repoVars = {};
-              const repoPath = item.levelKey || '';
+              const repoPath = item.groupKey || '';
               if (!registry.repoVars[repoPath]) registry.repoVars[repoPath] = {};
               if (newValue === '') {
                 delete registry.repoVars[repoPath][item.varName];
@@ -1360,7 +1360,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             
             case 'agent': {
               if (!registry.agentVars) registry.agentVars = {};
-              const agent = item.levelKey || '';
+              const agent = item.groupKey || '';
               if (!registry.agentVars[agent]) registry.agentVars[agent] = {};
               if (newValue === '') {
                 delete registry.agentVars[agent][item.varName];
@@ -1372,7 +1372,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             
             case 'category': {
               if (!registry.categoryVars) registry.categoryVars = {};
-              const category = item.levelKey || '';
+              const category = item.groupKey || '';
               if (!registry.categoryVars[category]) registry.categoryVars[category] = {};
               if (newValue === '') {
                 delete registry.categoryVars[category][item.varName];
@@ -1383,7 +1383,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             }
             
             case 'skill': {
-              const skillIndex = registry.skills.findIndex(s => s.name === item.levelKey);
+              const skillIndex = registry.skills.findIndex(s => s.name === item.groupKey);
               if (skillIndex === -1) {
                 vscode.window.showErrorMessage('Skill not found.');
                 return;
@@ -1400,7 +1400,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             }
             
             case 'target': {
-              const [skillName, agent] = (item.levelKey || '').split('@');
+              const [skillName, agent] = (item.groupKey || '').split('@');
               const targetIndex = registry.targets?.findIndex(
                 t => t.skillName === skillName && t.agent === agent
               );
@@ -1427,7 +1427,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           deps.repoStatusView.refresh();
 
           vscode.window.showInformationMessage(
-            `Updated ${item.varName} = "${newValue}" at ${item.level} level`
+            `Updated ${item.varName} = "${newValue}" at ${item.section} level`
           );
         } catch (error) {
           vscode.window.showErrorMessage(`Edit variable failed: ${error}`);
