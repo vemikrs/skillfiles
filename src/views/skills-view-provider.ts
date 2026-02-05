@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import type { Skill, Registry } from '../core/types.js';
 import type { RegistryStore } from '../core/registry-store.js';
 
@@ -45,7 +47,54 @@ export class CategoryTreeItem extends vscode.TreeItem {
   }
 }
 
-type SkillsTreeElement = SkillTreeItem | CategoryTreeItem;
+/**
+ * Tree item for skill resource files/folders.
+ */
+export class ResourceTreeItem extends vscode.TreeItem {
+  constructor(
+    public readonly resourcePath: string,
+    public readonly isDirectory: boolean,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState
+  ) {
+    super(path.basename(resourcePath), collapsibleState);
+    this.contextValue = isDirectory ? 'resourceFolder' : 'resourceFile';
+    this.tooltip = resourcePath;
+    
+    // Set icon based on type
+    if (isDirectory) {
+      this.iconPath = new vscode.ThemeIcon('folder');
+    } else {
+      // Determine icon based on file extension
+      const ext = path.extname(resourcePath).toLowerCase();
+      const iconMap: Record<string, string> = {
+        '.md': 'markdown',
+        '.txt': 'file-text',
+        '.sh': 'terminal',
+        '.js': 'file-code',
+        '.ts': 'file-code',
+        '.py': 'file-code',
+        '.json': 'json',
+        '.yaml': 'file-code',
+        '.yml': 'file-code',
+        '.png': 'file-media',
+        '.jpg': 'file-media',
+        '.svg': 'file-media',
+      };
+      this.iconPath = new vscode.ThemeIcon(iconMap[ext] || 'file');
+    }
+
+    // Click to open file (only for files)
+    if (!isDirectory) {
+      this.command = {
+        command: 'vscode.open',
+        title: 'Open File',
+        arguments: [vscode.Uri.file(resourcePath)]
+      };
+    }
+  }
+}
+
+type SkillsTreeElement = SkillTreeItem | CategoryTreeItem | ResourceTreeItem;
 
 /**
  * TreeDataProvider for the Skills view.
@@ -102,20 +151,111 @@ export class SkillsViewProvider implements vscode.TreeDataProvider<SkillsTreeEle
             )
         );
       } else {
-        // Flat list
+        // Flat list - skills are now expandable
         return skills.map(
           skill =>
-            new SkillTreeItem(skill, vscode.TreeItemCollapsibleState.None)
+            new SkillTreeItem(skill, vscode.TreeItemCollapsibleState.Collapsed)
         );
       }
     }
 
     if (element instanceof CategoryTreeItem) {
+      // Category children: skills (now expandable)
       return element.skills.map(
-        skill => new SkillTreeItem(skill, vscode.TreeItemCollapsibleState.None)
+        skill => new SkillTreeItem(skill, vscode.TreeItemCollapsibleState.Collapsed)
       );
     }
 
+    if (element instanceof SkillTreeItem) {
+      // Skill children: folder contents
+      return this.getSkillResources(element.skill);
+    }
+
+    if (element instanceof ResourceTreeItem && element.isDirectory) {
+      // Resource folder children
+      return this.getFolderContents(element.resourcePath);
+    }
+
     return [];
+  }
+
+  /**
+   * Get resources inside a skill folder (excluding SKILL.md itself).
+   */
+  private async getSkillResources(skill: Skill): Promise<ResourceTreeItem[]> {
+    if (!skill.folderPath) {
+      return [];
+    }
+
+    try {
+      const entries = await fs.readdir(skill.folderPath, { withFileTypes: true });
+      const resources: ResourceTreeItem[] = [];
+
+      for (const entry of entries) {
+        // Skip SKILL.md (already shown as main file), history folder, and hidden files
+        if (entry.name === 'SKILL.md' || entry.name === 'history' || entry.name.startsWith('.')) {
+          continue;
+        }
+
+        const fullPath = path.join(skill.folderPath, entry.name);
+        resources.push(new ResourceTreeItem(
+          fullPath,
+          entry.isDirectory(),
+          entry.isDirectory() 
+            ? vscode.TreeItemCollapsibleState.Collapsed 
+            : vscode.TreeItemCollapsibleState.None
+        ));
+      }
+
+      // Sort: directories first, then files, alphabetically
+      resources.sort((a, b) => {
+        if (a.isDirectory !== b.isDirectory) {
+          return a.isDirectory ? -1 : 1;
+        }
+        return a.label!.toString().localeCompare(b.label!.toString());
+      });
+
+      return resources;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Get folder contents recursively.
+   */
+  private async getFolderContents(folderPath: string): Promise<ResourceTreeItem[]> {
+    try {
+      const entries = await fs.readdir(folderPath, { withFileTypes: true });
+      const resources: ResourceTreeItem[] = [];
+
+      for (const entry of entries) {
+        // Skip hidden files
+        if (entry.name.startsWith('.')) {
+          continue;
+        }
+
+        const fullPath = path.join(folderPath, entry.name);
+        resources.push(new ResourceTreeItem(
+          fullPath,
+          entry.isDirectory(),
+          entry.isDirectory()
+            ? vscode.TreeItemCollapsibleState.Collapsed
+            : vscode.TreeItemCollapsibleState.None
+        ));
+      }
+
+      // Sort: directories first, then files
+      resources.sort((a, b) => {
+        if (a.isDirectory !== b.isDirectory) {
+          return a.isDirectory ? -1 : 1;
+        }
+        return a.label!.toString().localeCompare(b.label!.toString());
+      });
+
+      return resources;
+    } catch {
+      return [];
+    }
   }
 }
