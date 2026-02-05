@@ -399,15 +399,33 @@ export function registerCommands(
           
           const skillFilePath = path.join(skillDir, 'SKILL.md');
           
-          // Create skill template
-          const content = `# ${skillName}
+          // Create skill template following agentskills.io standard
+          const content = `---
+name: ${skillName}
+description: |
+  A brief description of what this skill does and when to use it.
+  This helps AI agents determine if this skill is relevant for a task.
+---
 
-Write your skill instructions here.
+# ${skillName}
+
+Detailed instructions for the AI agent on how to perform this skill.
+
+## When to Use
+
+- Describe specific scenarios when this skill should be applied
+- Include trigger phrases or patterns
 
 ## Guidelines
 
 - Be specific about the behavior you want
 - Include examples when helpful
+
+## Examples
+
+\`\`\`
+Example usage or code snippet
+\`\`\`
 
 ## Template Variables
 
