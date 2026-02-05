@@ -3,65 +3,113 @@ import type { Target, Registry, Skill } from '../core/types.js';
 import type { RegistryStore } from '../core/registry-store.js';
 import type { TemplateEngine } from '../core/template-engine.js';
 import * as fs from 'fs/promises';
+import * as path from 'path';
 
-// Variable source types
+// Tree item types
+type ItemType = 'section' | 'group' | 'variable';
 type VarSource = 'global' | 'repo' | 'agent' | 'category' | 'skill' | 'target';
 
 /**
- * Tree item for a variable level section.
+ * Section header (e.g., "Global Variables", "Repositories")
  */
-export class VarLevelTreeItem extends vscode.TreeItem {
+export class SectionTreeItem extends vscode.TreeItem {
+  readonly type = 'section' as const;
+  
   constructor(
-    public readonly level: VarSource,
-    public readonly levelKey: string | undefined,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState
+    public readonly section: VarSource,
+    public readonly isEmpty: boolean = false
   ) {
     const labels: Record<VarSource, string> = {
-      global: 'Global',
-      repo: 'Repository',
-      agent: 'Agent',
-      category: 'Category',
-      skill: 'Skill',
-      target: 'Target'
+      global: 'Global Variables',
+      repo: 'Repositories',
+      agent: 'Agents',
+      category: 'Categories',
+      skill: 'Skills',
+      target: 'Targets'
     };
-    super(levelKey ? `${labels[level]}: ${levelKey}` : labels[level], collapsibleState);
+    
+    super(
+      labels[section], 
+      isEmpty 
+        ? vscode.TreeItemCollapsibleState.None 
+        : vscode.TreeItemCollapsibleState.Expanded
+    );
+    
+    const icons: Record<VarSource, string> = {
+      global: 'globe',
+      repo: 'folder-library',
+      agent: 'hubot',
+      category: 'symbol-folder',
+      skill: 'file-code',
+      target: 'target'
+    };
+    
+    this.iconPath = new vscode.ThemeIcon(icons[section]);
+    this.contextValue = `section-${section}`;
+    
+    if (isEmpty) {
+      this.description = '(empty)';
+    }
+  }
+}
+
+/**
+ * Group item (e.g., specific repo, agent, skill)
+ */
+export class GroupTreeItem extends vscode.TreeItem {
+  readonly type = 'group' as const;
+  
+  constructor(
+    public readonly section: VarSource,
+    public readonly groupKey: string,
+    public readonly displayName: string,
+    public readonly fullPath?: string
+  ) {
+    super(displayName, vscode.TreeItemCollapsibleState.Collapsed);
     
     const icons: Record<VarSource, string> = {
       global: 'globe',
       repo: 'repo',
       agent: 'robot',
       category: 'folder',
-      skill: 'file-code',
-      target: 'target'
+      skill: 'file',
+      target: 'git-merge'
     };
-    this.iconPath = new vscode.ThemeIcon(icons[level]);
-    this.contextValue = `varLevel-${level}`;
+    
+    this.iconPath = new vscode.ThemeIcon(icons[section]);
+    this.contextValue = `group-${section}`;
+    
+    if (fullPath && fullPath !== displayName) {
+      this.tooltip = fullPath;
+    }
   }
 }
 
 /**
- * Tree item for a variable at any level.
+ * Variable item (leaf)
  */
 export class VariableTreeItem extends vscode.TreeItem {
+  readonly type = 'variable' as const;
+  
   constructor(
     public readonly varName: string,
     public readonly varValue: string | undefined,
-    public readonly level: VarSource,
-    public readonly levelKey: string | undefined,
+    public readonly section: VarSource,
+    public readonly groupKey: string | undefined,
     public readonly isMissing: boolean
   ) {
     super(varName, vscode.TreeItemCollapsibleState.None);
     
     if (isMissing) {
       this.description = '(not set)';
-      this.iconPath = new vscode.ThemeIcon('circle-outline');
+      this.iconPath = new vscode.ThemeIcon('circle-outline', new vscode.ThemeColor('disabledForeground'));
     } else {
-      this.description = `"${varValue}"`;
-      this.iconPath = new vscode.ThemeIcon('symbol-string');
+      this.description = `= "${varValue}"`;
+      this.iconPath = new vscode.ThemeIcon('symbol-variable', new vscode.ThemeColor('symbolIcon.variableForeground'));
     }
     
-    this.contextValue = `variable-${level}`;
-    this.tooltip = `Click to edit. Level: ${level}${levelKey ? ` (${levelKey})` : ''}`;
+    this.contextValue = `variable-${section}`;
+    this.tooltip = `${varName} at ${section}${groupKey ? ` (${groupKey})` : ''}\nClick to edit`;
     
     this.command = {
       command: 'skillfiles.editHierarchicalVariable',
@@ -71,14 +119,26 @@ export class VariableTreeItem extends vscode.TreeItem {
   }
 }
 
-// Legacy exports for backward compatibility
-export class TargetVarsTreeItem extends VarLevelTreeItem {
+// Legacy compatibility exports
+export class VarLevelTreeItem extends GroupTreeItem {
+  constructor(
+    public readonly level: VarSource,
+    public readonly levelKey: string | undefined,
+    collapsibleState: vscode.TreeItemCollapsibleState
+  ) {
+    super(level, levelKey || '', levelKey || '', levelKey);
+    this.collapsibleState = collapsibleState;
+  }
+}
+
+export class TargetVarsTreeItem extends GroupTreeItem {
   constructor(
     public readonly target: Target,
     public readonly skill: Skill,
     collapsibleState: vscode.TreeItemCollapsibleState
   ) {
-    super('target', `${target.skillName}@${target.repoPath.split('/').pop()}`, collapsibleState);
+    super('target', `${target.skillName}@${target.agent}`, `${target.skillName}@${target.agent}`, target.repoPath);
+    this.collapsibleState = collapsibleState;
     this.tooltip = `${target.repoPath} (${target.agent})`;
   }
 }
@@ -94,11 +154,11 @@ export class DefaultVariableTreeItem extends VariableTreeItem {
   }
 }
 
-type VariablesTreeElement = VarLevelTreeItem | VariableTreeItem;
+type VariablesTreeElement = SectionTreeItem | GroupTreeItem | VariableTreeItem;
 
 /**
  * TreeDataProvider for the Variables view.
- * Shows 6-layer variable hierarchy.
+ * Beautiful hierarchical tree structure.
  */
 export class VariablesViewProvider implements vscode.TreeDataProvider<VariablesTreeElement> {
   private _onDidChangeTreeData = new vscode.EventEmitter<VariablesTreeElement | undefined | void>();
@@ -124,163 +184,223 @@ export class VariablesViewProvider implements vscode.TreeDataProvider<VariablesT
     this.registry = await this.registryStore.loadRegistry();
     await this.collectAllVarNames();
 
+    // Root level: show sections
     if (!element) {
-      // Root: show all 6 levels
-      return this.getRootLevels();
+      return this.getSections();
     }
 
-    if (element instanceof VarLevelTreeItem) {
-      return this.getLevelChildren(element);
+    // Section level: show groups or variables
+    if (element instanceof SectionTreeItem) {
+      return this.getSectionChildren(element.section);
+    }
+
+    // Group level: show variables
+    if (element instanceof GroupTreeItem) {
+      return this.getGroupVariables(element.section, element.groupKey, element.fullPath);
     }
 
     return [];
   }
 
-  private getRootLevels(): VarLevelTreeItem[] {
-    const items: VarLevelTreeItem[] = [];
+  private getSections(): SectionTreeItem[] {
+    const sections: SectionTreeItem[] = [];
     
-    // Global
-    items.push(new VarLevelTreeItem('global', undefined, vscode.TreeItemCollapsibleState.Collapsed));
+    // Global (always show)
+    sections.push(new SectionTreeItem('global', this.allVarNames.size === 0));
     
-    // Repos (if any repoVars exist or targets exist)
-    const repoKeys = new Set<string>();
-    if (this.registry?.repoVars) {
-      Object.keys(this.registry.repoVars).forEach(k => repoKeys.add(k));
-    }
-    this.registry?.targets?.forEach(t => repoKeys.add(t.repoPath));
-    
-    for (const repoPath of repoKeys) {
-      items.push(new VarLevelTreeItem('repo', repoPath.split('/').pop() || repoPath, 
-        vscode.TreeItemCollapsibleState.Collapsed));
+    // Repositories
+    const hasRepos = this.getRepoKeys().length > 0;
+    if (hasRepos) {
+      sections.push(new SectionTreeItem('repo'));
     }
     
     // Agents
-    const agentKeys = new Set<string>();
-    if (this.registry?.agentVars) {
-      Object.keys(this.registry.agentVars).forEach(k => agentKeys.add(k));
-    }
-    if (this.registry?.agentProfiles) {
-      Object.keys(this.registry.agentProfiles).forEach(k => agentKeys.add(k));
-    }
-    
-    for (const agent of agentKeys) {
-      items.push(new VarLevelTreeItem('agent', agent, vscode.TreeItemCollapsibleState.Collapsed));
+    const hasAgents = this.getAgentKeys().length > 0;
+    if (hasAgents) {
+      sections.push(new SectionTreeItem('agent'));
     }
     
     // Categories
-    const categoryKeys = new Set<string>();
-    if (this.registry?.categoryVars) {
-      Object.keys(this.registry.categoryVars).forEach(k => categoryKeys.add(k));
-    }
-    this.registry?.skills.forEach(s => {
-      if (s.category) categoryKeys.add(s.category);
-    });
-    
-    for (const category of categoryKeys) {
-      items.push(new VarLevelTreeItem('category', category, vscode.TreeItemCollapsibleState.Collapsed));
+    const hasCategories = this.getCategoryKeys().length > 0;
+    if (hasCategories) {
+      sections.push(new SectionTreeItem('category'));
     }
     
     // Skills with variables
-    for (const skill of this.registry?.skills || []) {
-      if (skill.defaultVars && Object.keys(skill.defaultVars).length > 0) {
-        items.push(new VarLevelTreeItem('skill', skill.name, vscode.TreeItemCollapsibleState.Collapsed));
-      }
+    const skillsWithVars = (this.registry?.skills || []).filter(
+      s => s.defaultVars && Object.keys(s.defaultVars).length > 0
+    );
+    if (skillsWithVars.length > 0) {
+      sections.push(new SectionTreeItem('skill'));
     }
     
     // Targets with variables
-    for (const target of this.registry?.targets || []) {
-      if (target.vars && Object.keys(target.vars).length > 0) {
-        items.push(new VarLevelTreeItem('target', `${target.skillName}@${target.agent}`,
-          vscode.TreeItemCollapsibleState.Collapsed));
-      }
+    const targetsWithVars = (this.registry?.targets || []).filter(
+      t => t.vars && Object.keys(t.vars).length > 0
+    );
+    if (targetsWithVars.length > 0) {
+      sections.push(new SectionTreeItem('target'));
     }
     
-    return items;
+    return sections;
   }
 
-  private getLevelChildren(level: VarLevelTreeItem): VariableTreeItem[] {
+  private getSectionChildren(section: VarSource): VariablesTreeElement[] {
+    switch (section) {
+      case 'global':
+        // Global shows variables directly
+        return this.getGlobalVariables();
+      
+      case 'repo':
+        return this.getRepoKeys().map(({ key, fullPath }) => 
+          new GroupTreeItem('repo', key, key, fullPath)
+        );
+      
+      case 'agent':
+        return this.getAgentKeys().map(agent => 
+          new GroupTreeItem('agent', agent, agent)
+        );
+      
+      case 'category':
+        return this.getCategoryKeys().map(category => 
+          new GroupTreeItem('category', category, category)
+        );
+      
+      case 'skill':
+        return (this.registry?.skills || [])
+          .filter(s => s.defaultVars && Object.keys(s.defaultVars).length > 0)
+          .map(s => new GroupTreeItem('skill', s.name, s.name));
+      
+      case 'target':
+        return (this.registry?.targets || [])
+          .filter(t => t.vars && Object.keys(t.vars).length > 0)
+          .map(t => new GroupTreeItem(
+            'target', 
+            `${t.skillName}@${t.agent}`, 
+            `${t.skillName}@${t.agent}`,
+            t.repoPath
+          ));
+    }
+    
+    return [];
+  }
+
+  private getGlobalVariables(): VariableTreeItem[] {
+    const vars = this.registry?.globalVars || {};
     const items: VariableTreeItem[] = [];
     
-    switch (level.level) {
-      case 'global': {
-        const vars = this.registry?.globalVars || {};
-        // Show all known var names, marking unset ones
-        for (const varName of this.allVarNames) {
-          items.push(new VariableTreeItem(varName, vars[varName], 'global', undefined, !(varName in vars)));
-        }
-        break;
-      }
-      
-      case 'repo': {
-        const repoPath = this.findFullRepoPath(level.levelKey || '');
-        const vars = repoPath && this.registry?.repoVars?.[repoPath] || {};
-        for (const varName of this.allVarNames) {
-          items.push(new VariableTreeItem(varName, vars[varName], 'repo', repoPath || level.levelKey, !(varName in vars)));
-        }
-        break;
-      }
-      
-      case 'agent': {
-        const vars = this.registry?.agentVars?.[level.levelKey || ''] || {};
-        for (const varName of this.allVarNames) {
-          items.push(new VariableTreeItem(varName, vars[varName], 'agent', level.levelKey, !(varName in vars)));
-        }
-        break;
-      }
-      
-      case 'category': {
-        const vars = this.registry?.categoryVars?.[level.levelKey || ''] || {};
-        for (const varName of this.allVarNames) {
-          items.push(new VariableTreeItem(varName, vars[varName], 'category', level.levelKey, !(varName in vars)));
-        }
-        break;
-      }
-      
-      case 'skill': {
-        const skill = this.registry?.skills.find(s => s.name === level.levelKey);
-        const vars = skill?.defaultVars || {};
-        for (const [varName, varValue] of Object.entries(vars)) {
-          items.push(new VariableTreeItem(varName, varValue, 'skill', level.levelKey, false));
-        }
-        break;
-      }
-      
-      case 'target': {
-        const [skillName, agent] = (level.levelKey || '').split('@');
-        const target = this.registry?.targets?.find(t => t.skillName === skillName && t.agent === agent);
-        const vars = target?.vars || {};
-        for (const [varName, varValue] of Object.entries(vars)) {
-          items.push(new VariableTreeItem(varName, varValue, 'target', level.levelKey, false));
-        }
-        break;
+    // Show set variables first
+    for (const [varName, varValue] of Object.entries(vars)) {
+      items.push(new VariableTreeItem(varName, varValue, 'global', undefined, false));
+    }
+    
+    // Show unset variables
+    for (const varName of this.allVarNames) {
+      if (!(varName in vars)) {
+        items.push(new VariableTreeItem(varName, undefined, 'global', undefined, true));
       }
     }
     
     return items;
   }
 
-  private findFullRepoPath(shortName: string): string | undefined {
-    // Find full repo path from short name
-    for (const target of this.registry?.targets || []) {
-      if (target.repoPath.endsWith(shortName) || target.repoPath.split('/').pop() === shortName) {
-        return target.repoPath;
+  private getGroupVariables(section: VarSource, groupKey: string, fullPath?: string): VariableTreeItem[] {
+    let vars: Record<string, string> = {};
+    
+    switch (section) {
+      case 'repo':
+        vars = this.registry?.repoVars?.[fullPath || groupKey] || {};
+        break;
+      case 'agent':
+        vars = this.registry?.agentVars?.[groupKey] || {};
+        break;
+      case 'category':
+        vars = this.registry?.categoryVars?.[groupKey] || {};
+        break;
+      case 'skill': {
+        const skill = this.registry?.skills.find(s => s.name === groupKey);
+        vars = skill?.defaultVars || {};
+        break;
+      }
+      case 'target': {
+        const [skillName, agent] = groupKey.split('@');
+        const target = this.registry?.targets?.find(t => t.skillName === skillName && t.agent === agent);
+        vars = target?.vars || {};
+        break;
       }
     }
-    if (this.registry?.repoVars) {
-      for (const repoPath of Object.keys(this.registry.repoVars)) {
-        if (repoPath.endsWith(shortName) || repoPath.split('/').pop() === shortName) {
-          return repoPath;
+    
+    const items: VariableTreeItem[] = [];
+    
+    // Show set variables
+    for (const [varName, varValue] of Object.entries(vars)) {
+      items.push(new VariableTreeItem(varName, varValue, section, groupKey, false));
+    }
+    
+    // For repo/agent/category levels, also show unset variables
+    if (['repo', 'agent', 'category'].includes(section)) {
+      for (const varName of this.allVarNames) {
+        if (!(varName in vars)) {
+          items.push(new VariableTreeItem(varName, undefined, section, groupKey, true));
         }
       }
     }
-    return undefined;
+    
+    return items;
+  }
+
+  private getRepoKeys(): { key: string; fullPath: string }[] {
+    const repos = new Map<string, string>();
+    
+    if (this.registry?.repoVars) {
+      for (const repoPath of Object.keys(this.registry.repoVars)) {
+        const key = repoPath.split('/').pop() || repoPath;
+        repos.set(key, repoPath);
+      }
+    }
+    
+    for (const target of this.registry?.targets || []) {
+      const key = target.repoPath.split('/').pop() || target.repoPath;
+      if (!repos.has(key)) {
+        repos.set(key, target.repoPath);
+      }
+    }
+    
+    return Array.from(repos.entries()).map(([key, fullPath]) => ({ key, fullPath }));
+  }
+
+  private getAgentKeys(): string[] {
+    const agents = new Set<string>();
+    
+    if (this.registry?.agentVars) {
+      Object.keys(this.registry.agentVars).forEach(k => agents.add(k));
+    }
+    if (this.registry?.agentProfiles) {
+      Object.keys(this.registry.agentProfiles).forEach(k => agents.add(k));
+    }
+    
+    return Array.from(agents);
+  }
+
+  private getCategoryKeys(): string[] {
+    const categories = new Set<string>();
+    
+    if (this.registry?.categoryVars) {
+      Object.keys(this.registry.categoryVars).forEach(k => categories.add(k));
+    }
+    for (const skill of this.registry?.skills || []) {
+      if (skill.category) {
+        categories.add(skill.category);
+      }
+    }
+    
+    return Array.from(categories);
   }
 
   private async collectAllVarNames(): Promise<void> {
     this.allVarNames.clear();
     const BUILTIN_VARS = ['AGENT', 'VENDOR', 'SCOPE'];
     const varPattern = /\{\{([A-Z_][A-Z0-9_]*)\}\}/g;
-    const path = await import('path');
 
     for (const skill of this.registry?.skills || []) {
       if (!skill.folderPath) continue;
