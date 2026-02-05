@@ -19,6 +19,13 @@ export class SkillTreeItem extends vscode.TreeItem {
     this.iconPath = new vscode.ThemeIcon(
       skill.scope === 'shared' ? 'globe' : 'file-code'
     );
+
+    // Click to open skill file
+    this.command = {
+      command: 'skillfiles.openSkill',
+      title: 'Open Skill',
+      arguments: [this]
+    };
   }
 }
 
