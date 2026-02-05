@@ -5,7 +5,6 @@
   "version": "0.1.2",
   "publisher": "mi",
   "license": "MIT",
-  "type": "module",
   "packageManager": "pnpm@10.28.2",
   "icon": "resources/icon.png",
   "repository": {
@@ -125,6 +124,36 @@
         "title": "Open Audit Log",
         "category": "Skillfiles",
         "icon": "$(list-unordered)"
+      },
+      {
+        "command": "skillfiles.setupScanRoots",
+        "title": "Setup Scan Roots",
+        "category": "Skillfiles",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "skillfiles.discoverSkills",
+        "title": "Discover Skills from Repositories",
+        "category": "Skillfiles",
+        "icon": "$(search)"
+      },
+      {
+        "command": "skillfiles.copySkillPath",
+        "title": "Copy Skill Path",
+        "category": "Skillfiles",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "skillfiles.deleteSkill",
+        "title": "Delete Skill",
+        "category": "Skillfiles",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "skillfiles.copyTargetPath",
+        "title": "Copy Target Path",
+        "category": "Skillfiles",
+        "icon": "$(clippy)"
       }
     ],
     "viewsContainers": {
@@ -152,6 +181,94 @@
           "id": "skillfiles.historyView",
           "name": "History",
           "icon": "$(history)"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "skillfiles.skillsView",
+        "contents": "Get Started!\n\n[$(search) Scan Repositories](command:skillfiles.discoverSkills)\nDiscover and import existing skill files\n\n[$(add) Create New Skill](command:skillfiles.createSkill)\n\n[$(folder-opened) Setup Scan Roots](command:skillfiles.setupScanRoots)",
+        "when": "skillfiles.noSkills"
+      },
+      {
+        "view": "skillfiles.repoStatusView",
+        "contents": "No repositories registered.\n\n[$(search) Scan Repositories](command:skillfiles.discoverSkills)\n\n[$(folder-opened) Setup Scan Roots](command:skillfiles.setupScanRoots)",
+        "when": "skillfiles.noRepos"
+      },
+      {
+        "view": "skillfiles.historyView",
+        "contents": "No history yet.\n\nSnapshots are automatically saved when you\nPush or Collect skills.",
+        "when": "skillfiles.noHistory"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "skillfiles.refreshSkills",
+          "when": "view == skillfiles.skillsView",
+          "group": "navigation"
+        },
+        {
+          "command": "skillfiles.createSkill",
+          "when": "view == skillfiles.skillsView",
+          "group": "navigation"
+        },
+        {
+          "command": "skillfiles.refreshRepoStatus",
+          "when": "view == skillfiles.repoStatusView",
+          "group": "navigation"
+        },
+        {
+          "command": "skillfiles.refreshHistory",
+          "when": "view == skillfiles.historyView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "skillfiles.openSkill",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "1_open"
+        },
+        {
+          "command": "skillfiles.copySkillPath",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "2_copy"
+        },
+        {
+          "command": "skillfiles.deleteSkill",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "3_delete"
+        },
+        {
+          "command": "skillfiles.pushSkill",
+          "when": "view == skillfiles.repoStatusView && viewItem =~ /^target/",
+          "group": "1_sync"
+        },
+        {
+          "command": "skillfiles.collectSkill",
+          "when": "view == skillfiles.repoStatusView && viewItem =~ /^target/",
+          "group": "1_sync"
+        },
+        {
+          "command": "skillfiles.showDiff",
+          "when": "view == skillfiles.repoStatusView && viewItem =~ /^target/",
+          "group": "2_view"
+        },
+        {
+          "command": "skillfiles.copyTargetPath",
+          "when": "view == skillfiles.repoStatusView && viewItem =~ /^target/",
+          "group": "3_copy"
+        },
+        {
+          "command": "skillfiles.rollbackSkill",
+          "when": "view == skillfiles.historyView && viewItem == snapshot",
+          "group": "1_action"
+        },
+        {
+          "command": "skillfiles.previewSnapshot",
+          "when": "view == skillfiles.historyView && viewItem == snapshot",
+          "group": "2_view"
         }
       ]
     },
@@ -229,19 +346,88 @@
           "type": "number",
           "default": 50,
           "description": "Number of history snapshots to retain per skill"
+        },
+        "skillfiles.agentProfiles": {
+          "type": "object",
+          "default": {
+            "copilot": {
+              "vendor": "github",
+              "instructionPaths": [".github/copilot-instructions.md", "AGENTS.md"],
+              "skillFolderPath": ".github/skills",
+              "skillFileName": "SKILL.md"
+            },
+            "claude": {
+              "vendor": "anthropic",
+              "instructionPaths": ["CLAUDE.md"],
+              "skillFolderPath": ".claude/skills",
+              "skillFileName": "SKILL.md"
+            },
+            "cursor": {
+              "vendor": "anysphere",
+              "instructionPaths": [".cursorrules", ".cursor/rules"],
+              "skillFolderPath": ".cursor/skills",
+              "skillFileName": "SKILL.md"
+            },
+            "windsurf": {
+              "vendor": "codeium",
+              "instructionPaths": [".windsurfrules", ".windsurf/rules"],
+              "skillFolderPath": ".windsurf/skills",
+              "skillFileName": "SKILL.md"
+            },
+            "gemini": {
+              "vendor": "google",
+              "instructionPaths": ["GEMINI.md", ".gemini/styleguide.md"],
+              "skillFolderPath": ".gemini/skills",
+              "skillFileName": "SKILL.md"
+            },
+            "aider": {
+              "vendor": "aider",
+              "instructionPaths": ["CONVENTIONS.md", "AGENTS.md"],
+              "skillFolderPath": ".aider/skills",
+              "skillFileName": "SKILL.md"
+            }
+          },
+          "description": "Agent-specific file path configurations. Each agent can have instructionPaths (for reference), skillFolderPath, and skillFileName.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "vendor": {
+                "type": "string",
+                "description": "Vendor name"
+              },
+              "instructionPaths": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Instruction file paths (not managed by Skillfiles)"
+              },
+              "skillFolderPath": {
+                "type": "string",
+                "description": "Folder path where skills are deployed"
+              },
+              "skillFileName": {
+                "type": "string",
+                "description": "Skill file name pattern"
+              }
+            }
+          }
         }
       }
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "pnpm run compile",
-    "test": "pnpm run test:unit && pnpm run test:integration",
+    "vscode:prepublish": "pnpm run esbuild-base -- --production",
+    "esbuild-base": "node esbuild.mjs",
+    "esbuild": "pnpm run esbuild-base -- --sourcemap",
+    "esbuild-watch": "pnpm run esbuild-base -- --sourcemap --watch",
+    "compile": "pnpm run esbuild",
+    "compile:test": "tsc -p ./tsconfig.test.json",
+    "typecheck": "tsc -p ./ --noEmit",
+    "watch": "pnpm run esbuild-watch",
+    "pretest": "pnpm run compile && pnpm run compile:test",
+    "test": "pnpm run test:unit",
     "test:unit": "mocha 'out/test/unit/**/*.test.js'",
-    "test:integration": "mocha 'out/test/integration/**/*.test.js'",
     "test:e2e": "node ./out/test/runTest.js",
+    "test:vsix": "node ./out/test/runVsixTest.js",
     "test:coverage": "nyc pnpm run test",
     "lint": "eslint src",
     "package": "vsce package --no-dependencies -o dist/"
@@ -259,6 +445,7 @@
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
     "chai": "^6.2.2",
+    "esbuild": "^0.27.2",
     "eslint": "^9.39.2",
     "glob": "^13.0.1",
     "mocha": "^11.7.5",
