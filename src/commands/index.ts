@@ -1136,11 +1136,20 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             description: agentDescriptions[name] || profile.vendor,
             detail: `Deploy to: ${profile.skillFolderPath}/${item.skill.name}/${profile.skillFileName}`,
             agent: name,
-            profile
+            profile,
+            // Mark gemini as default (uses .agent folder)
+            picked: name === 'gemini'
           }));
 
+          // Sort to put gemini first (default)
+          agentItems.sort((a, b) => {
+            if (a.agent === 'gemini') return -1;
+            if (b.agent === 'gemini') return 1;
+            return a.label.localeCompare(b.label);
+          });
+
           const selectedAgent = await vscode.window.showQuickPick(agentItems, {
-            placeHolder: 'Select AI agent',
+            placeHolder: 'Select AI agent (default: gemini/.agent)',
             title: 'Which agent should use this skill?'
           });
 
