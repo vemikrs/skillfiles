@@ -31,7 +31,8 @@ export interface Skill {
   description?: string;
   scope: Scope;
   category?: string;
-  path?: string;
+  /** Path to the skill folder (contains SKILL.md and optional resources) */
+  folderPath: string;
   template?: string;
   registryPath: string;
   defaultVars?: Record<string, string>;
