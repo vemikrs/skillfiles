@@ -804,22 +804,29 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           return;
         }
 
-        const confirm = await vscode.window.showWarningMessage(
-          `Push all ${item.targets.length} skills in ${item.repoPath}?`,
-          'Yes',
-          'Cancel'
-        );
-
-        if (confirm !== 'Yes') {
-          return;
-        }
-
         try {
           const registry = await deps.registryStore.loadRegistry();
+          const targets = registry.targets?.filter(t => t.repoPath === item.repoPath) || [];
+          
+          if (targets.length === 0) {
+            vscode.window.showInformationMessage('No targets in this repository.');
+            return;
+          }
+
+          const confirm = await vscode.window.showWarningMessage(
+            `Push all ${targets.length} skills in ${item.repoPath}?`,
+            'Yes',
+            'Cancel'
+          );
+
+          if (confirm !== 'Yes') {
+            return;
+          }
+
           let pushCount = 0;
           let errorCount = 0;
 
-          for (const target of item.targets) {
+          for (const target of targets) {
             try {
               const skill = registry.skills.find(s => s.name === target.skillName);
               if (!skill?.path || !target.deployPath) {continue;}
@@ -858,22 +865,29 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           return;
         }
 
-        const confirm = await vscode.window.showWarningMessage(
-          `Collect all ${item.targets.length} skills from ${item.repoPath}?`,
-          'Yes',
-          'Cancel'
-        );
-
-        if (confirm !== 'Yes') {
-          return;
-        }
-
         try {
           const registry = await deps.registryStore.loadRegistry();
+          const targets = registry.targets?.filter(t => t.repoPath === item.repoPath) || [];
+          
+          if (targets.length === 0) {
+            vscode.window.showInformationMessage('No targets in this repository.');
+            return;
+          }
+
+          const confirm = await vscode.window.showWarningMessage(
+            `Collect all ${targets.length} skills from ${item.repoPath}?`,
+            'Yes',
+            'Cancel'
+          );
+
+          if (confirm !== 'Yes') {
+            return;
+          }
+
           let collectCount = 0;
           let errorCount = 0;
 
-          for (const target of item.targets) {
+          for (const target of targets) {
             try {
               const skill = registry.skills.find(s => s.name === target.skillName);
               if (!skill?.path || !target.deployPath) {continue;}
@@ -1208,10 +1222,21 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
     })
   );
 
-  // Edit variable command
+  // Edit variable command (hierarchical - supports all 6 levels)
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'skillfiles.editVariable',
+      async (item?: VariableTreeItem) => {
+        // Redirect to hierarchical handler
+        await vscode.commands.executeCommand('skillfiles.editHierarchicalVariable', item);
+      }
+    )
+  );
+
+  // Edit hierarchical variable command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.editHierarchicalVariable',
       async (item?: VariableTreeItem) => {
         if (!item) {
           vscode.window.showErrorMessage('Please select a variable to edit.');
@@ -1219,7 +1244,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
         }
 
         const newValue = await vscode.window.showInputBox({
-          prompt: `Enter value for ${item.varName}`,
+          prompt: `Enter value for ${item.varName} (${item.level}${item.levelKey ? `: ${item.levelKey}` : ''})`,
           value: item.varValue || '',
           placeHolder: `Value for ${item.varName}`
         });
@@ -1231,28 +1256,89 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
         try {
           const registry = await deps.registryStore.loadRegistry();
           
-          // Find the target in registry
-          const targetIndex = registry.targets?.findIndex(
-            t => t.skillName === item.target.skillName &&
-                 t.repoPath === item.target.repoPath &&
-                 t.agent === item.target.agent
-          );
-
-          if (targetIndex === undefined || targetIndex === -1 || !registry.targets) {
-            vscode.window.showErrorMessage('Target not found in registry.');
-            return;
-          }
-
-          // Update or add the variable
-          if (!registry.targets[targetIndex].vars) {
-            registry.targets[targetIndex].vars = {};
-          }
-          
-          if (newValue === '') {
-            // Remove the variable if empty
-            delete registry.targets[targetIndex].vars![item.varName];
-          } else {
-            registry.targets[targetIndex].vars![item.varName] = newValue;
+          switch (item.level) {
+            case 'global': {
+              if (!registry.globalVars) registry.globalVars = {};
+              if (newValue === '') {
+                delete registry.globalVars[item.varName];
+              } else {
+                registry.globalVars[item.varName] = newValue;
+              }
+              break;
+            }
+            
+            case 'repo': {
+              if (!registry.repoVars) registry.repoVars = {};
+              const repoPath = item.levelKey || '';
+              if (!registry.repoVars[repoPath]) registry.repoVars[repoPath] = {};
+              if (newValue === '') {
+                delete registry.repoVars[repoPath][item.varName];
+              } else {
+                registry.repoVars[repoPath][item.varName] = newValue;
+              }
+              break;
+            }
+            
+            case 'agent': {
+              if (!registry.agentVars) registry.agentVars = {};
+              const agent = item.levelKey || '';
+              if (!registry.agentVars[agent]) registry.agentVars[agent] = {};
+              if (newValue === '') {
+                delete registry.agentVars[agent][item.varName];
+              } else {
+                registry.agentVars[agent][item.varName] = newValue;
+              }
+              break;
+            }
+            
+            case 'category': {
+              if (!registry.categoryVars) registry.categoryVars = {};
+              const category = item.levelKey || '';
+              if (!registry.categoryVars[category]) registry.categoryVars[category] = {};
+              if (newValue === '') {
+                delete registry.categoryVars[category][item.varName];
+              } else {
+                registry.categoryVars[category][item.varName] = newValue;
+              }
+              break;
+            }
+            
+            case 'skill': {
+              const skillIndex = registry.skills.findIndex(s => s.name === item.levelKey);
+              if (skillIndex === -1) {
+                vscode.window.showErrorMessage('Skill not found.');
+                return;
+              }
+              if (!registry.skills[skillIndex].defaultVars) {
+                registry.skills[skillIndex].defaultVars = {};
+              }
+              if (newValue === '') {
+                delete registry.skills[skillIndex].defaultVars![item.varName];
+              } else {
+                registry.skills[skillIndex].defaultVars![item.varName] = newValue;
+              }
+              break;
+            }
+            
+            case 'target': {
+              const [skillName, agent] = (item.levelKey || '').split('@');
+              const targetIndex = registry.targets?.findIndex(
+                t => t.skillName === skillName && t.agent === agent
+              );
+              if (targetIndex === undefined || targetIndex === -1 || !registry.targets) {
+                vscode.window.showErrorMessage('Target not found.');
+                return;
+              }
+              if (!registry.targets[targetIndex].vars) {
+                registry.targets[targetIndex].vars = {};
+              }
+              if (newValue === '') {
+                delete registry.targets[targetIndex].vars![item.varName];
+              } else {
+                registry.targets[targetIndex].vars![item.varName] = newValue;
+              }
+              break;
+            }
           }
 
           await deps.registryStore.saveRegistry(registry);
@@ -1262,7 +1348,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           deps.repoStatusView.refresh();
 
           vscode.window.showInformationMessage(
-            `Updated ${item.varName} = "${newValue}" for ${item.target.skillName}`
+            `Updated ${item.varName} = "${newValue}" at ${item.level} level`
           );
         } catch (error) {
           vscode.window.showErrorMessage(`Edit variable failed: ${error}`);
