@@ -36,6 +36,42 @@ export class RegistryStore {
   }
 
   /**
+   * Load registry or create empty one if not found.
+   * Creates parent directories and default registry.yaml if needed.
+   */
+  async loadOrCreateRegistry(): Promise<Registry> {
+    try {
+      return await this.loadRegistry();
+    } catch (error) {
+      if (error instanceof RegistryNotFoundError) {
+        // Create default empty registry
+        const defaultRegistry: Registry = {
+          registryRoot: path.dirname(this.registryPath),
+          agentProfiles: {
+            'copilot': {
+              vendor: 'github',
+              instructionPaths: ['.github/copilot-instructions.md', 'AGENTS.md'],
+              skillFolderPath: '.github/skills',
+              skillFileName: 'SKILL.md'
+            },
+            'claude': {
+              vendor: 'anthropic',
+              instructionPaths: ['CLAUDE.md'],
+              skillFolderPath: '.claude/skills',
+              skillFileName: 'SKILL.md'
+            }
+          },
+          skills: [],
+          targets: []
+        };
+        await this.saveRegistry(defaultRegistry);
+        return defaultRegistry;
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Save registry to registry.yaml file.
    * Creates parent directories if needed.
    */
