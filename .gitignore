@@ -1,5 +1,6 @@
 # Build output
 out/
+dist/
 *.vsix
 
 # Test temp
