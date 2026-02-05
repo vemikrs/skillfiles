@@ -198,6 +198,12 @@
         "icon": "$(trash)"
       },
       {
+        "command": "skillfiles.manageTargets",
+        "title": "Manage Targets",
+        "category": "Skillfiles",
+        "icon": "$(list-unordered)"
+      },
+      {
         "command": "skillfiles.editVariable",
         "title": "Edit Variable",
         "category": "Skillfiles",
@@ -411,6 +417,11 @@
         },
         {
           "command": "skillfiles.addTarget",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "2_copy"
+        },
+        {
+          "command": "skillfiles.manageTargets",
           "when": "view == skillfiles.skillsView && viewItem == skill",
           "group": "2_copy"
         },

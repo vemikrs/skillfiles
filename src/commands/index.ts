@@ -1242,6 +1242,77 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
     )
   );
 
+  // Manage targets command (remove targets from skill context)
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.manageTargets',
+      async (item?: SkillTreeItem) => {
+        if (!item) {
+          vscode.window.showErrorMessage('Please select a skill to manage targets.');
+          return;
+        }
+
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          const targets = registry.targets?.filter(t => t.skillName === item.skill.name) || [];
+
+          if (targets.length === 0) {
+            vscode.window.showInformationMessage(`No targets registered for skill: ${item.skill.name}`);
+            return;
+          }
+
+          // Show targets for selection
+          const targetItems = targets.map(t => ({
+            label: `${t.agent} · ${t.repoPath.split('/').pop()}`,
+            description: t.deployPath,
+            detail: t.repoPath,
+            target: t
+          }));
+
+          const selected = await vscode.window.showQuickPick(targetItems, {
+            placeHolder: 'Select target to remove',
+            title: `Manage Targets for ${item.skill.name}`,
+            canPickMany: true
+          });
+
+          if (!selected || selected.length === 0) {
+            return;
+          }
+
+          const confirm = await vscode.window.showWarningMessage(
+            `Remove ${selected.length} target(s)?`,
+            { modal: true },
+            'Remove', 'Cancel'
+          );
+
+          if (confirm !== 'Remove') {
+            return;
+          }
+
+          // Remove selected targets
+          for (const sel of selected) {
+            const idx = registry.targets?.findIndex(
+              t => t.skillName === sel.target.skillName &&
+                   t.repoPath === sel.target.repoPath &&
+                   t.agent === sel.target.agent
+            );
+            if (idx !== undefined && idx !== -1) {
+              registry.targets?.splice(idx, 1);
+            }
+          }
+
+          await deps.registryStore.saveRegistry(registry);
+          deps.skillsView.refresh();
+          deps.repoStatusView.refresh();
+
+          vscode.window.showInformationMessage(`Removed ${selected.length} target(s) from ${item.skill.name}.`);
+        } catch (error) {
+          vscode.window.showErrorMessage(`Manage targets failed: ${error}`);
+        }
+      }
+    )
+  );
+
   // Remove target command
   context.subscriptions.push(
     vscode.commands.registerCommand(
