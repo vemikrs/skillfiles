@@ -36,17 +36,38 @@ export class PathResolver {
 
   /**
    * Resolve the deployment path for a skill in a repository.
-   * Uses agentProfile's defaultDeployPath if deployPath is not specified.
+   * Uses agentProfile's skillFolderPath and skillFileName if deployPath is not specified.
    * @throws AgentProfileNotFoundError if agent not found
    */
-  resolveDeployPath(repoRoot: string, agent: string, deployPath: string | undefined): string {
+  resolveDeployPath(repoRoot: string, agent: string, skillName: string, deployPath: string | undefined): string {
+    if (deployPath) {
+      return path.join(repoRoot, deployPath);
+    }
+    
     const agentProfile = this.registry.agentProfiles[agent];
     if (!agentProfile) {
       throw new AgentProfileNotFoundError(`Agent profile not found: ${agent}`);
     }
     
-    const effectiveDeployPath = deployPath ?? agentProfile.defaultDeployPath;
-    return path.join(repoRoot, effectiveDeployPath);
+    // Construct path: repoRoot / skillFolderPath / skillName / skillFileName
+    return path.join(
+      repoRoot, 
+      agentProfile.skillFolderPath, 
+      skillName, 
+      agentProfile.skillFileName
+    );
+  }
+
+  /**
+   * Resolve the skill folder path (without file name) for a skill in a repository.
+   */
+  resolveSkillFolderPath(repoRoot: string, agent: string, skillName: string): string {
+    const agentProfile = this.registry.agentProfiles[agent];
+    if (!agentProfile) {
+      throw new AgentProfileNotFoundError(`Agent profile not found: ${agent}`);
+    }
+    
+    return path.join(repoRoot, agentProfile.skillFolderPath, skillName);
   }
 
   /**
