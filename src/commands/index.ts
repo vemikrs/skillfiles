@@ -80,10 +80,11 @@ export function registerCommands(
               try {
                 if (!skillItem.skill.folderPath || !target.deployPath) {continue;}
 
+                const path = await import('path');
                 await deps.pushService.push({
                   skillName: skillItem.skill.name,
                   skillFolderPath: skillItem.skill.folderPath,
-                  deployFolderPath: target.deployPath,
+                  deployFolderPath: path.dirname(target.deployPath),
                   vars: target.vars || {},
                   context: { agent: target.agent, scope: skillItem.skill.scope }
                 });
@@ -107,10 +108,11 @@ export function registerCommands(
               return;
             }
 
+            const path = await import('path');
             await deps.pushService.push({
               skillName: targetItem.target.skillName,
               skillFolderPath: skill.folderPath || '',
-              deployFolderPath: targetItem.target.deployPath ?? '',
+              deployFolderPath: path.dirname(targetItem.target.deployPath ?? ''),
               vars: targetItem.target.vars || {},
               context: { agent: targetItem.target.agent, scope: skill.scope }
             });
@@ -551,10 +553,11 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
               const skill = registry.skills.find(s => s.name === target.skillName);
               if (!skill?.folderPath || !target.deployPath) {continue;}
 
+              const path = await import('path');
               await deps.pushService.push({
                 skillName: target.skillName,
                 skillFolderPath: skill.folderPath,
-                deployFolderPath: target.deployPath,
+                deployFolderPath: path.dirname(target.deployPath),
                 vars: target.vars || {},
                 context: { scope: 'repo' }
               });
@@ -927,10 +930,11 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
               const skill = registry.skills.find(s => s.name === target.skillName);
               if (!skill?.folderPath || !target.deployPath) {continue;}
 
+              const path = await import('path');
               await deps.pushService.push({
                 skillName: target.skillName,
                 skillFolderPath: skill.folderPath,
-                deployFolderPath: target.deployPath,
+                deployFolderPath: path.dirname(target.deployPath),
                 vars: target.vars || {},
                 context: { agent: target.agent, scope: skill.scope }
               });
@@ -1350,7 +1354,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             await deps.pushService.push({
               skillName: item.skill.name,
               skillFolderPath: item.skill.folderPath,
-              deployFolderPath: deployPath,
+              deployFolderPath: path.dirname(deployPath),
               vars: {},
               context: { agent: selectedAgent.agent, scope: item.skill.scope }
             });
