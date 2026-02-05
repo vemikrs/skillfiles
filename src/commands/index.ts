@@ -1416,4 +1416,85 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
       }
     )
   );
+
+  // Set category command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.setCategory',
+      async (item?: SkillTreeItem) => {
+        if (!item) {
+          vscode.window.showErrorMessage('Please select a skill.');
+          return;
+        }
+
+        // Get existing categories for quick pick
+        const registry = await deps.registryStore.loadRegistry();
+        const existingCategories = new Set<string>();
+        for (const skill of registry.skills) {
+          if (skill.category) {
+            existingCategories.add(skill.category);
+          }
+        }
+
+        const categoryOptions: vscode.QuickPickItem[] = [
+          { label: '$(add) New Category...', description: 'Create a new category' },
+          { label: '$(close) Remove Category', description: 'Set to Uncategorized' },
+          ...Array.from(existingCategories).map(cat => ({
+            label: cat,
+            description: 'Existing category'
+          }))
+        ];
+
+        const selected = await vscode.window.showQuickPick(categoryOptions, {
+          placeHolder: `Select category for ${item.label}`
+        });
+
+        if (!selected) {
+          return;
+        }
+
+        let newCategory: string | undefined;
+
+        if (selected.label === '$(add) New Category...') {
+          newCategory = await vscode.window.showInputBox({
+            prompt: 'Enter new category name',
+            placeHolder: 'e.g., coding-style, documentation'
+          });
+          if (!newCategory) {
+            return;
+          }
+        } else if (selected.label === '$(close) Remove Category') {
+          newCategory = undefined;
+        } else {
+          newCategory = selected.label;
+        }
+
+        try {
+          const skillIndex = registry.skills.findIndex(s => s.name === item.label);
+          if (skillIndex === -1) {
+            vscode.window.showErrorMessage('Skill not found.');
+            return;
+          }
+
+          if (newCategory) {
+            registry.skills[skillIndex].category = newCategory;
+          } else {
+            delete registry.skills[skillIndex].category;
+          }
+
+          await deps.registryStore.saveRegistry(registry);
+          deps.skillsView.refresh();
+          deps.variablesView.refresh();
+
+          vscode.window.showInformationMessage(
+            newCategory 
+              ? `Set category to "${newCategory}" for ${item.label}`
+              : `Removed category from ${item.label}`
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage(`Set category failed: ${error}`);
+        }
+      }
+    )
+  );
 }

@@ -220,6 +220,12 @@
         "title": "Edit Variable",
         "category": "Skillfiles",
         "icon": "$(edit)"
+      },
+      {
+        "command": "skillfiles.setCategory",
+        "title": "Set Category",
+        "category": "Skillfiles",
+        "icon": "$(folder)"
       }
     ],
     "viewsContainers": {
@@ -363,6 +369,11 @@
         },
         {
           "command": "skillfiles.addTarget",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "2_copy"
+        },
+        {
+          "command": "skillfiles.setCategory",
           "when": "view == skillfiles.skillsView && viewItem == skill",
           "group": "2_copy"
         },
