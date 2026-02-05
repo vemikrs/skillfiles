@@ -12,6 +12,7 @@ import * as path from 'path';
  * Known user home skill directories.
  */
 const USER_HOME_SKILL_DIRS = [
+  { agent: 'agent', path: '.agent/skills' },
   { agent: 'gemini', path: '.gemini/skills' },
   { agent: 'claude', path: '.claude/skills' },
   { agent: 'copilot', path: '.github/skills' },
