@@ -35,11 +35,11 @@ export class PathResolver {
   }
 
   /**
-   * Resolve the deployment path for a skill in a repository.
-   * Uses agentProfile's skillFolderPath and skillFileName if deployPath is not specified.
+   * Resolve the deployment folder path for a skill in a repository.
+   * Returns the folder containing SKILL.md and resources.
    * @throws AgentProfileNotFoundError if agent not found
    */
-  resolveDeployPath(repoRoot: string, agent: string, skillName: string, deployPath: string | undefined): string {
+  resolveDeployFolderPath(repoRoot: string, agent: string, skillName: string, deployPath: string | undefined): string {
     if (deployPath) {
       return path.join(repoRoot, deployPath);
     }
@@ -49,12 +49,11 @@ export class PathResolver {
       throw new AgentProfileNotFoundError(`Agent profile not found: ${agent}`);
     }
     
-    // Construct path: repoRoot / skillFolderPath / skillName / skillFileName
+    // Construct path: repoRoot / skillFolderPath / skillName
     return path.join(
       repoRoot, 
       agentProfile.skillFolderPath, 
-      skillName, 
-      agentProfile.skillFileName
+      skillName
     );
   }
 
@@ -78,10 +77,10 @@ export class PathResolver {
   }
 
   /**
-   * Resolve the path to a skill.md within registry or shared root.
+   * Resolve the path to the skill folder within registry or shared root.
    */
-  resolveSkillPath(skillName: string, scope: Scope): string {
+  resolveSkillFolderPathInRegistry(skillName: string, scope: Scope): string {
     const root = this.resolveScope(scope);
-    return path.join(root, 'skills', skillName, 'skill.md');
+    return path.join(root, 'skills', skillName);
   }
 }
