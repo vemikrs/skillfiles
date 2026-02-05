@@ -339,6 +339,22 @@ export function registerCommands(
     vscode.commands.registerCommand(
       'skillfiles.createSkill',
       async () => {
+        // First, select scope
+        const scopeChoice = await vscode.window.showQuickPick(
+          [
+            { label: 'Shared', description: 'Reusable across repositories (~/.agent/skills/)', value: 'shared' as const },
+            { label: 'Repository', description: 'Repository-specific skill', value: 'repo' as const }
+          ],
+          {
+            placeHolder: 'Select skill scope',
+            title: 'Create New Skill'
+          }
+        );
+
+        if (!scopeChoice) {
+          return;
+        }
+
         const skillName = await vscode.window.showInputBox({
           prompt: 'Enter new skill name',
           placeHolder: 'my-coding-assistant',
@@ -364,16 +380,24 @@ export function registerCommands(
             return;
           }
 
-          // Get registry root path
-          const config = vscode.workspace.getConfiguration('skillfiles');
-          const registryPath = config.get<string>('registryPath') || '~/.skillfiles';
-          const registryRoot = registryPath.replace(/^~/, process.env.HOME || '');
-          
-          // Create skill directory and file
           const fs = await import('fs/promises');
           const path = await import('path');
-          const skillDir = path.join(registryRoot, 'skills', skillName);
-          const skillFilePath = path.join(skillDir, 'skill.md');
+          const os = await import('os');
+          
+          let skillDir: string;
+          
+          if (scopeChoice.value === 'shared') {
+            // Shared skills go to ~/.agent/skills/
+            skillDir = path.join(os.homedir(), '.agent', 'skills', skillName);
+          } else {
+            // Repo skills go to registry root
+            const config = vscode.workspace.getConfiguration('skillfiles');
+            const registryPath = config.get<string>('registryPath') || '~/.skillfiles';
+            const registryRoot = registryPath.replace(/^~/, process.env.HOME || '');
+            skillDir = path.join(registryRoot, 'skills', skillName);
+          }
+          
+          const skillFilePath = path.join(skillDir, 'SKILL.md');
           
           // Create skill template
           const content = `# ${skillName}
@@ -397,8 +421,8 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           // Register in registry
           const newSkill = {
             name: skillName,
-            scope: 'repo' as const,
-            registryPath: `skills/${skillName}/skill.md`,
+            scope: scopeChoice.value,
+            registryPath: `skills/${skillName}/SKILL.md`,
             folderPath: skillDir,
             targets: []
           };
@@ -413,7 +437,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           deps.skillsView.refresh();
           
           vscode.window.showInformationMessage(
-            `Created skill "${skillName}" and registered in registry.`
+            `Created ${scopeChoice.value} skill "${skillName}"`
           );
         } catch (error) {
           vscode.window.showErrorMessage(`Create failed: ${error}`);
