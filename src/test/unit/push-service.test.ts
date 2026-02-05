@@ -28,13 +28,14 @@ describe('PushService', () => {
   });
 
   describe('push', () => {
-    it('should expand template and write to deployPath', async () => {
-      // Setup skill in registry
+    it('should expand template and copy folder to deployFolderPath', async () => {
+      // Setup skill folder in registry with SKILL.md
       const skillDir = path.join(registryDir, 'skills', 'test-skill');
       fs.mkdirSync(skillDir, { recursive: true });
-      fs.writeFileSync(path.join(skillDir, 'skill.md'), 'Hello {{NAME}}!');
+      fs.writeFileSync(path.join(skillDir, 'SKILL.md'), 'Hello {{NAME}}!');
+      fs.writeFileSync(path.join(skillDir, 'helper.sh'), 'echo {{NAME}}');
       
-      const deployPath = path.join(repoDir, '.github', 'instructions.md');
+      const deployFolderPath = path.join(repoDir, '.github', 'skills', 'test-skill');
       
       const historyManager = new HistoryManager(registryDir);
       const auditLog = new AuditLogStore(registryDir);
@@ -42,24 +43,32 @@ describe('PushService', () => {
       
       const pushService = new PushService(historyManager, auditLog, templateEngine);
       
-      await pushService.push({
+      const result = await pushService.push({
         skillName: 'test-skill',
-        skillPath: path.join(skillDir, 'skill.md'),
-        deployPath,
+        skillFolderPath: skillDir,
+        deployFolderPath,
         vars: { NAME: 'World' },
         context: { agent: 'copilot', vendor: 'github', scope: 'repo' }
       });
       
-      const content = fs.readFileSync(deployPath, 'utf-8');
+      // Check SKILL.md was copied with template expansion
+      const content = fs.readFileSync(path.join(deployFolderPath, 'SKILL.md'), 'utf-8');
       expect(content).to.equal('Hello World!');
+      
+      // Check helper script was also expanded
+      const helperContent = fs.readFileSync(path.join(deployFolderPath, 'helper.sh'), 'utf-8');
+      expect(helperContent).to.equal('echo World');
+      
+      expect(result.success).to.be.true;
+      expect(result.filesCount).to.equal(2);
     });
 
     it('should create directories if missing', async () => {
       const skillDir = path.join(registryDir, 'skills', 'test-skill');
       fs.mkdirSync(skillDir, { recursive: true });
-      fs.writeFileSync(path.join(skillDir, 'skill.md'), '# Test');
+      fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '# Test');
       
-      const deployPath = path.join(repoDir, 'deep', 'nested', 'path', 'skill.md');
+      const deployFolderPath = path.join(repoDir, 'deep', 'nested', 'path', 'test-skill');
       
       const historyManager = new HistoryManager(registryDir);
       const auditLog = new AuditLogStore(registryDir);
@@ -69,25 +78,24 @@ describe('PushService', () => {
       
       await pushService.push({
         skillName: 'test-skill',
-        skillPath: path.join(skillDir, 'skill.md'),
-        deployPath,
+        skillFolderPath: skillDir,
+        deployFolderPath,
         vars: {},
         context: { agent: 'copilot', vendor: 'github', scope: 'repo' }
       });
       
-      expect(fs.existsSync(deployPath)).to.be.true;
+      expect(fs.existsSync(path.join(deployFolderPath, 'SKILL.md'))).to.be.true;
     });
 
     it('should save history before overwriting', async () => {
       const skillDir = path.join(registryDir, 'skills', 'test-skill');
       fs.mkdirSync(skillDir, { recursive: true });
-      fs.writeFileSync(path.join(skillDir, 'skill.md'), 'New Content');
+      fs.writeFileSync(path.join(skillDir, 'SKILL.md'), 'New Content');
       
-      // Existing file in repo
-      const deployDir = path.join(repoDir, '.github');
-      fs.mkdirSync(deployDir, { recursive: true });
-      const deployPath = path.join(deployDir, 'instructions.md');
-      fs.writeFileSync(deployPath, 'Old Content');
+      // Existing folder in repo
+      const deployFolderPath = path.join(repoDir, '.github', 'skills', 'test-skill');
+      fs.mkdirSync(deployFolderPath, { recursive: true });
+      fs.writeFileSync(path.join(deployFolderPath, 'SKILL.md'), 'Old Content');
       
       const historyManager = new HistoryManager(registryDir);
       const auditLog = new AuditLogStore(registryDir);
@@ -97,23 +105,24 @@ describe('PushService', () => {
       
       await pushService.push({
         skillName: 'test-skill',
-        skillPath: path.join(skillDir, 'skill.md'),
-        deployPath,
+        skillFolderPath: skillDir,
+        deployFolderPath,
         vars: {},
         context: { agent: 'copilot', vendor: 'github', scope: 'repo' }
       });
       
-      // Check history was saved
+      // Check history was saved (folder snapshot)
       const snapshots = await historyManager.listSnapshots('test-skill');
       expect(snapshots.length).to.be.greaterThan(0);
+      expect(snapshots[0].type).to.equal('folder');
     });
 
     it('should append audit log', async () => {
       const skillDir = path.join(registryDir, 'skills', 'test-skill');
       fs.mkdirSync(skillDir, { recursive: true });
-      fs.writeFileSync(path.join(skillDir, 'skill.md'), '# Test');
+      fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '# Test');
       
-      const deployPath = path.join(repoDir, '.github', 'instructions.md');
+      const deployFolderPath = path.join(repoDir, '.github', 'skills', 'test-skill');
       
       const historyManager = new HistoryManager(registryDir);
       const auditLog = new AuditLogStore(registryDir);
@@ -123,8 +132,8 @@ describe('PushService', () => {
       
       await pushService.push({
         skillName: 'test-skill',
-        skillPath: path.join(skillDir, 'skill.md'),
-        deployPath,
+        skillFolderPath: skillDir,
+        deployFolderPath,
         vars: {},
         context: { agent: 'copilot', vendor: 'github', scope: 'repo' }
       });
@@ -138,9 +147,9 @@ describe('PushService', () => {
     it('should skip write when dryRun enabled', async () => {
       const skillDir = path.join(registryDir, 'skills', 'test-skill');
       fs.mkdirSync(skillDir, { recursive: true });
-      fs.writeFileSync(path.join(skillDir, 'skill.md'), '# Test');
+      fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '# Test');
       
-      const deployPath = path.join(repoDir, '.github', 'instructions.md');
+      const deployFolderPath = path.join(repoDir, '.github', 'skills', 'test-skill');
       
       const historyManager = new HistoryManager(registryDir);
       const auditLog = new AuditLogStore(registryDir);
@@ -150,13 +159,45 @@ describe('PushService', () => {
       
       await pushService.push({
         skillName: 'test-skill',
-        skillPath: path.join(skillDir, 'skill.md'),
-        deployPath,
+        skillFolderPath: skillDir,
+        deployFolderPath,
         vars: {},
         context: { agent: 'copilot', vendor: 'github', scope: 'repo' }
       });
       
-      expect(fs.existsSync(deployPath)).to.be.false;
+      expect(fs.existsSync(deployFolderPath)).to.be.false;
+    });
+
+    it('should remove deleted files from target when pushing', async () => {
+      const skillDir = path.join(registryDir, 'skills', 'test-skill');
+      fs.mkdirSync(skillDir, { recursive: true });
+      fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '# Test');
+      // Note: No helper.sh in source
+      
+      // Existing folder in repo has extra file
+      const deployFolderPath = path.join(repoDir, '.github', 'skills', 'test-skill');
+      fs.mkdirSync(deployFolderPath, { recursive: true });
+      fs.writeFileSync(path.join(deployFolderPath, 'SKILL.md'), 'Old');
+      fs.writeFileSync(path.join(deployFolderPath, 'helper.sh'), 'This should be removed');
+      
+      const historyManager = new HistoryManager(registryDir);
+      const auditLog = new AuditLogStore(registryDir);
+      const templateEngine = new TemplateEngine();
+      
+      const pushService = new PushService(historyManager, auditLog, templateEngine);
+      
+      await pushService.push({
+        skillName: 'test-skill',
+        skillFolderPath: skillDir,
+        deployFolderPath,
+        vars: {},
+        context: { agent: 'copilot', scope: 'repo' }
+      });
+      
+      // Check SKILL.md exists
+      expect(fs.existsSync(path.join(deployFolderPath, 'SKILL.md'))).to.be.true;
+      // Check helper.sh was removed (since it's not in source)
+      expect(fs.existsSync(path.join(deployFolderPath, 'helper.sh'))).to.be.false;
     });
   });
 });
