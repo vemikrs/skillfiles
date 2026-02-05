@@ -78,12 +78,12 @@ export function registerCommands(
 
             for (const target of targets) {
               try {
-                if (!skillItem.skill.path || !target.deployPath) {continue;}
+                if (!skillItem.skill.folderPath || !target.deployPath) {continue;}
 
                 await deps.pushService.push({
                   skillName: skillItem.skill.name,
-                  skillPath: skillItem.skill.path,
-                  deployPath: target.deployPath,
+                  skillFolderPath: skillItem.skill.folderPath,
+                  deployFolderPath: target.deployPath,
                   vars: target.vars || {},
                   context: { agent: target.agent, scope: skillItem.skill.scope }
                 });
@@ -109,8 +109,8 @@ export function registerCommands(
 
             await deps.pushService.push({
               skillName: targetItem.target.skillName,
-              skillPath: skill.path || '',
-              deployPath: targetItem.target.deployPath ?? '',
+              skillFolderPath: skill.folderPath || '',
+              deployFolderPath: targetItem.target.deployPath ?? '',
               vars: targetItem.target.vars || {},
               context: { agent: targetItem.target.agent, scope: skill.scope }
             });
@@ -150,7 +150,7 @@ export function registerCommands(
           
           await deps.collectService.collect({
             skillName,
-            sourcePath: item.target.deployPath ?? '',
+            sourceFolderPath: item.target.deployPath ?? '',
             registryRoot: registry.registryRoot || ''
           });
 
@@ -228,10 +228,10 @@ export function registerCommands(
     vscode.commands.registerCommand(
       'skillfiles.copySkillPath',
       async (item?: SkillTreeItem) => {
-        if (!item?.skill.path) {
+        if (!item?.skill.folderPath) {
           return;
         }
-        await vscode.env.clipboard.writeText(item.skill.path);
+        await vscode.env.clipboard.writeText(item.skill.folderPath);
         vscode.window.showInformationMessage('Skill path copied to clipboard');
       }
     )
@@ -276,10 +276,10 @@ export function registerCommands(
           await deps.registryStore.saveRegistry(registry);
           
           // Delete skill files if they exist
-          if (item.skill.path) {
+          if (item.skill.folderPath) {
             const fs = await import('fs/promises');
             const path = await import('path');
-            const skillDir = path.dirname(item.skill.path);
+            const skillDir = path.dirname(item.skill.folderPath);
             try {
               await fs.rm(skillDir, { recursive: true });
             } catch {
@@ -319,7 +319,7 @@ export function registerCommands(
         }
 
         try {
-          const skillPath = item.skill.path;
+          const skillPath = item.skill.folderPath;
           if (skillPath) {
             const doc = await vscode.workspace.openTextDocument(skillPath);
             await vscode.window.showTextDocument(doc);
@@ -396,7 +396,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             name: skillName,
             scope: 'repo' as const,
             registryPath: `skills/${skillName}/skill.md`,
-            path: skillFilePath,
+            folderPath: skillDir,
             targets: []
           };
           registry.skills.push(newSkill);
@@ -433,12 +433,12 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           const registry = await deps.registryStore.loadRegistry();
           const skill = registry.skills.find(s => s.name === item.target.skillName);
           
-          if (!skill?.path) {
+          if (!skill?.folderPath) {
             vscode.window.showErrorMessage('Skill not found');
             return;
           }
 
-          const leftUri = vscode.Uri.file(skill.path);
+          const leftUri = vscode.Uri.file(skill.folderPath);
           const rightUri = vscode.Uri.file(item.target.deployPath ?? '');
           
           await vscode.commands.executeCommand(
@@ -477,12 +477,12 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           for (const target of registry.targets || []) {
             try {
               const skill = registry.skills.find(s => s.name === target.skillName);
-              if (!skill?.path || !target.deployPath) {continue;}
+              if (!skill?.folderPath || !target.deployPath) {continue;}
 
               await deps.pushService.push({
                 skillName: target.skillName,
-                skillPath: skill.path,
-                deployPath: target.deployPath,
+                skillFolderPath: skill.folderPath,
+                deployFolderPath: target.deployPath,
                 vars: target.vars || {},
                 context: { scope: 'repo' }
               });
@@ -526,12 +526,12 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           for (const target of registry.targets || []) {
             try {
               const skill = registry.skills.find(s => s.name === target.skillName);
-              if (!skill?.path || !target.deployPath) {continue;}
+              if (!skill?.folderPath || !target.deployPath) {continue;}
 
               await deps.collectService.collect({
                 skillName: target.skillName,
-                sourcePath: target.deployPath,
-                registryRoot: skill.path.replace(/\/skills\/.*$/, '')
+                sourceFolderPath: target.deployPath,
+                registryRoot: skill.folderPath.replace(/\/skills\/.*$/, '')
               });
               collectCount++;
             } catch {
@@ -676,7 +676,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
               repoPath: string;
               agent: string;
               skillName: string;
-              skillPath: string;
+              skillFolderPath: string;
             }
             
             const discoveredSkills: DiscoveredSkill[] = [];
@@ -694,7 +694,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
                   repoPath: repo.path,
                   agent: skillFolder.agent,
                   skillName,
-                  skillPath: skillFolder.path
+                  skillFolderPath: skillFolder.folderPath
                 });
               }
             }
@@ -710,7 +710,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             const items = discoveredSkills.map(skill => ({
               label: skill.skillName,
               description: `${skill.agent} · ${skill.repoName}`,
-              detail: skill.skillPath,
+              detail: skill.skillFolderPath,
               skill
             }));
 
@@ -740,25 +740,37 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
                 continue;
               }
 
-              // Copy skill file to registry
+              // Copy entire skill folder to registry
               const skillDir = path.join(registryRoot, 'skills', skillName);
-              const skillFilePath = path.join(skillDir, 'skill.md');
               
-              await fs.mkdir(skillDir, { recursive: true });
-              await fs.copyFile(skill.skillPath, skillFilePath);
+              // Inline recursive copy
+              const copyDir = async (src: string, dest: string): Promise<void> => {
+                await fs.mkdir(dest, { recursive: true });
+                const entries = await fs.readdir(src, { withFileTypes: true });
+                for (const entry of entries) {
+                  const srcPath = path.join(src, entry.name);
+                  const destPath = path.join(dest, entry.name);
+                  if (entry.isDirectory()) {
+                    await copyDir(srcPath, destPath);
+                  } else {
+                    await fs.copyFile(srcPath, destPath);
+                  }
+                }
+              };
+              await copyDir(skill.skillFolderPath, skillDir);
               
               // Add to registry
               registry.skills.push({
                 name: skillName,
                 scope: 'repo',
-                registryPath: `skills/${skillName}/skill.md`,
-                path: skillFilePath,
+                registryPath: `skills/${skillName}`,
+                folderPath: skillDir,
                 targets: [{
                   skillName,
                   repoPath: skill.repoPath,
                   scanPath: skill.repoPath,
                   agent: skill.agent,
-                  deployPath: skill.skillPath
+                  deployPath: skill.skillFolderPath
                 }]
               });
               
@@ -835,12 +847,12 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           for (const target of targets) {
             try {
               const skill = registry.skills.find(s => s.name === target.skillName);
-              if (!skill?.path || !target.deployPath) {continue;}
+              if (!skill?.folderPath || !target.deployPath) {continue;}
 
               await deps.pushService.push({
                 skillName: target.skillName,
-                skillPath: skill.path,
-                deployPath: target.deployPath,
+                skillFolderPath: skill.folderPath,
+                deployFolderPath: target.deployPath,
                 vars: target.vars || {},
                 context: { agent: target.agent, scope: skill.scope }
               });
@@ -896,12 +908,12 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           for (const target of targets) {
             try {
               const skill = registry.skills.find(s => s.name === target.skillName);
-              if (!skill?.path || !target.deployPath) {continue;}
+              if (!skill?.folderPath || !target.deployPath) {continue;}
 
               await deps.collectService.collect({
                 skillName: target.skillName,
-                sourcePath: target.deployPath,
-                registryRoot: skill.path.replace(/\/skills\/.*$/, '')
+                sourceFolderPath: target.deployPath,
+                registryRoot: skill.folderPath.replace(/\/skills\/.*$/, '')
               });
               collectCount++;
             } catch {
@@ -974,7 +986,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           const registry = await deps.registryStore.loadRegistry();
           const skill = registry.skills.find(s => s.name === item.skillName);
           
-          if (!skill?.path) {
+          if (!skill?.folderPath) {
             vscode.window.showErrorMessage('Skill not found.');
             return;
           }
@@ -991,7 +1003,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             language: 'markdown'
           });
           
-          const currentUri = vscode.Uri.file(skill.path);
+          const currentUri = vscode.Uri.file(skill.folderPath);
           
           await vscode.commands.executeCommand(
             'vscode.diff',
@@ -1145,15 +1157,15 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           );
 
           if (pushNow === 'Push') {
-            if (!item.skill.path) {
+            if (!item.skill.folderPath) {
               vscode.window.showErrorMessage('Skill path not set.');
               return;
             }
 
             await deps.pushService.push({
               skillName: item.skill.name,
-              skillPath: item.skill.path,
-              deployPath,
+              skillFolderPath: item.skill.folderPath,
+              deployFolderPath: deployPath,
               vars: {},
               context: { agent: selectedAgent.agent, scope: item.skill.scope }
             });
