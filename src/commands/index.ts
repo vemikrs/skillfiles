@@ -1061,9 +1061,16 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           }
 
           // Let user select an agent
+          // Known agent aliases/descriptions
+          const agentDescriptions: Record<string, string> = {
+            gemini: 'Google (Antigravity)',
+            copilot: 'GitHub',
+            claude: 'Anthropic'
+          };
+
           const agentItems = Object.entries(agentProfiles).map(([name, profile]) => ({
             label: name,
-            description: profile.vendor,
+            description: agentDescriptions[name] || profile.vendor,
             detail: `Deploy to: ${profile.skillFolderPath}/${item.skill.name}/${profile.skillFileName}`,
             agent: name,
             profile
