@@ -885,7 +885,11 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           
           const config = vscode.workspace.getConfiguration('skillfiles');
           const agentProfiles = config.get<Record<string, {vendor: string; skillFolderPath: string; skillFileName: string}>>('agentProfiles') || {};
-          const registryPath = config.get<string>('registryPath') || path.join(os.homedir(), '.skillfiles');
+          let registryPath = config.get<string>('registryPath') || path.join(os.homedir(), '.skillfiles');
+          // Expand ~ to home directory
+          if (registryPath.startsWith('~')) {
+            registryPath = path.join(os.homedir(), registryPath.slice(1));
+          }
 
           await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
