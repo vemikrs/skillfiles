@@ -62,9 +62,10 @@ async function detectUnregisteredHomeSkills(registryStore: RegistryStore): Promi
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
         
-        const skillPath = path.join(fullPath, entry.name, 'SKILL.md');
+        const skillFolderPath = path.join(fullPath, entry.name);
+        const skillMdPath = path.join(skillFolderPath, 'SKILL.md');
         try {
-          await fs.access(skillPath);
+          await fs.access(skillMdPath);
           
           // Check if skill already exists in registry
           const existingSkill = registry.skills.find(s => s.name === entry.name);
@@ -73,7 +74,7 @@ async function detectUnregisteredHomeSkills(registryStore: RegistryStore): Promi
             unregistered.push({
               name: entry.name,
               agent,
-              sourcePath: skillPath
+              sourcePath: skillFolderPath  // folder path, not SKILL.md path
             });
           }
         } catch {
