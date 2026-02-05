@@ -1,10 +1,38 @@
 import * as vscode from 'vscode';
-import type { Target, TargetStatus, Registry, TargetWithStatus } from '../core/types.js';
+import * as os from 'os';
+import type { Target, TargetStatus, Registry, TargetWithStatus, Skill } from '../core/types.js';
 import type { RegistryStore } from '../core/registry-store.js';
 import type { DiffEngine } from '../core/diff-engine.js';
 import type { TemplateEngine } from '../core/template-engine.js';
 import { computeHash } from '../utils/hash.js';
 import * as fs from 'fs/promises';
+import * as path from 'path';
+
+/**
+ * Known user home skill directories.
+ */
+const USER_HOME_SKILL_DIRS = [
+  { agent: 'gemini', path: '.gemini/skills' },
+  { agent: 'claude', path: '.claude/skills' },
+  { agent: 'copilot', path: '.github/skills' },
+  { agent: 'codex', path: '.codex/skills' }
+];
+
+/**
+ * Tree item for User Home section.
+ */
+export class UserHomeTreeItem extends vscode.TreeItem {
+  constructor(
+    public readonly agents: string[],
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState
+  ) {
+    super('User Home', collapsibleState);
+    this.tooltip = 'Skills deployed to home directory';
+    this.contextValue = 'userHome';
+    this.iconPath = new vscode.ThemeIcon('home');
+    this.description = `${agents.length} agent${agents.length !== 1 ? 's' : ''}`;
+  }
+}
 
 /**
  * Tree item for repository entries.
@@ -24,7 +52,7 @@ export class RepoTreeItem extends vscode.TreeItem {
 }
 
 /**
- * Tree item for agent entries within a repo.
+ * Tree item for agent entries within a repo or user home.
  */
 export class AgentTreeItem extends vscode.TreeItem {
   constructor(
@@ -90,18 +118,19 @@ export class TargetTreeItem extends vscode.TreeItem {
   }
 }
 
-type RepoStatusTreeElement = RepoTreeItem | AgentTreeItem | TargetTreeItem;
+type DeployStatusTreeElement = UserHomeTreeItem | RepoTreeItem | AgentTreeItem | TargetTreeItem;
 
 /**
- * TreeDataProvider for the Repo Status view.
- * Structure: Repo → Agent → Skill
+ * TreeDataProvider for the Deploy Status view.
+ * Structure: [User Home | Repo] → Agent → Skill
  */
-export class RepoStatusViewProvider implements vscode.TreeDataProvider<RepoStatusTreeElement> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<RepoStatusTreeElement | undefined | void>();
+export class RepoStatusViewProvider implements vscode.TreeDataProvider<DeployStatusTreeElement> {
+  private _onDidChangeTreeData = new vscode.EventEmitter<DeployStatusTreeElement | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private registry: Registry | null = null;
   private targetStatusCache = new Map<string, TargetWithStatus>();
+  private homeSkillStatusCache = new Map<string, TargetWithStatus>();
 
   constructor(
     private readonly registryStore: RegistryStore,
@@ -112,26 +141,44 @@ export class RepoStatusViewProvider implements vscode.TreeDataProvider<RepoStatu
   refresh(): void {
     this.registry = null;
     this.targetStatusCache.clear();
+    this.homeSkillStatusCache.clear();
     this._onDidChangeTreeData.fire();
   }
 
-  getTreeItem(element: RepoStatusTreeElement): vscode.TreeItem {
+  getTreeItem(element: DeployStatusTreeElement): vscode.TreeItem {
     return element;
   }
 
-  async getChildren(element?: RepoStatusTreeElement): Promise<RepoStatusTreeElement[]> {
+  async getChildren(element?: DeployStatusTreeElement): Promise<DeployStatusTreeElement[]> {
     if (!this.registry) {
       try {
         this.registry = await this.registryStore.loadRegistry();
         await this.computeAllTargetStatuses();
+        await this.computeHomeSkillStatuses();
       } catch {
         return [];
       }
     }
 
     if (!element) {
-      // Root level: group by repo
-      return this.getRepoItems();
+      // Root level: User Home + Repos
+      const items: DeployStatusTreeElement[] = [];
+      
+      // Add User Home if there are any home skills
+      const homeAgents = this.getHomeAgents();
+      if (homeAgents.length > 0) {
+        items.push(new UserHomeTreeItem(homeAgents, vscode.TreeItemCollapsibleState.Expanded));
+      }
+      
+      // Add repos
+      items.push(...this.getRepoItems());
+      
+      return items;
+    }
+
+    if (element instanceof UserHomeTreeItem) {
+      // User Home level: group by agent
+      return this.getHomeAgentItems();
     }
 
     if (element instanceof RepoTreeItem) {
@@ -147,6 +194,34 @@ export class RepoStatusViewProvider implements vscode.TreeDataProvider<RepoStatu
     }
 
     return [];
+  }
+
+  private getHomeAgents(): string[] {
+    const agents = new Set<string>();
+    for (const [, target] of this.homeSkillStatusCache) {
+      agents.add(target.agent);
+    }
+    return Array.from(agents);
+  }
+
+  private getHomeAgentItems(): AgentTreeItem[] {
+    const agentTargetMap = new Map<string, TargetWithStatus[]>();
+    
+    for (const [, target] of this.homeSkillStatusCache) {
+      const targets = agentTargetMap.get(target.agent) || [];
+      targets.push(target);
+      agentTargetMap.set(target.agent, targets);
+    }
+
+    return Array.from(agentTargetMap.entries()).map(
+      ([agent, targets]) =>
+        new AgentTreeItem(
+          agent,
+          os.homedir(),
+          targets,
+          vscode.TreeItemCollapsibleState.Expanded
+        )
+    );
   }
 
   private getRepoItems(): RepoTreeItem[] {
@@ -197,6 +272,85 @@ export class RepoStatusViewProvider implements vscode.TreeDataProvider<RepoStatu
       const status = await this.computeTargetStatus(target);
       const key = `${target.repoPath}:${target.agent}:${target.skillName}`;
       this.targetStatusCache.set(key, { ...target, status });
+    }
+  }
+
+  private async computeHomeSkillStatuses(): Promise<void> {
+    this.homeSkillStatusCache.clear();
+    const homeDir = os.homedir();
+
+    // For each skill, check if it's deployed to user home directories
+    for (const skill of this.registry?.skills || []) {
+      for (const { agent, path: skillDir } of USER_HOME_SKILL_DIRS) {
+        const deployPath = path.join(homeDir, skillDir, skill.name, 'SKILL.md');
+        
+        const status = await this.computeHomeSkillStatus(skill, deployPath, agent);
+        if (status) {
+          const key = `home:${agent}:${skill.name}`;
+          this.homeSkillStatusCache.set(key, status);
+        }
+      }
+    }
+  }
+
+  private async computeHomeSkillStatus(
+    skill: Skill,
+    deployPath: string,
+    agent: string
+  ): Promise<TargetWithStatus | null> {
+    // Check if deployed file exists
+    try {
+      await fs.access(deployPath);
+    } catch {
+      return null; // File doesn't exist, not deployed
+    }
+
+    // Read skill template from registry
+    let templateContent = skill.template || '';
+    if (skill.path) {
+      try {
+        templateContent = await fs.readFile(skill.path, 'utf-8');
+      } catch {
+        return {
+          skillName: skill.name,
+          agent,
+          repoPath: os.homedir(),
+          scanPath: os.homedir(),
+          deployPath,
+          status: 'missing'
+        };
+      }
+    }
+
+    try {
+      const deployedContent = await fs.readFile(deployPath, 'utf-8');
+      const deployedHash = computeHash(deployedContent);
+      const registryHash = computeHash(templateContent);
+      
+      const status = this.diffEngine.computeStatus({
+        registryHash,
+        repoHash: deployedHash,
+        repoFileExists: true,
+        needsVars: false
+      });
+
+      return {
+        skillName: skill.name,
+        agent,
+        repoPath: os.homedir(),
+        scanPath: os.homedir(),
+        deployPath,
+        status
+      };
+    } catch {
+      return {
+        skillName: skill.name,
+        agent,
+        repoPath: os.homedir(),
+        scanPath: os.homedir(),
+        deployPath,
+        status: 'missing'
+      };
     }
   }
 

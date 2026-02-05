@@ -97,7 +97,7 @@
       },
       {
         "command": "skillfiles.refreshRepoStatus",
-        "title": "Refresh Repo Status",
+        "title": "Refresh Deploy Status",
         "category": "Skillfiles",
         "icon": "$(refresh)"
       },
@@ -246,8 +246,8 @@
         },
         {
           "id": "skillfiles.repoStatusView",
-          "name": "Repo Status",
-          "icon": "$(repo)"
+          "name": "Deploy Status",
+          "icon": "$(cloud-upload)"
         },
         {
           "id": "skillfiles.variablesView",
