@@ -372,12 +372,18 @@ export class VariablesViewProvider implements vscode.TreeDataProvider<VariablesT
   private getAgentKeys(): string[] {
     const agents = new Set<string>();
     
+    // From registry agentVars
     if (this.registry?.agentVars) {
       Object.keys(this.registry.agentVars).forEach(k => agents.add(k));
     }
+    // From registry agentProfiles
     if (this.registry?.agentProfiles) {
       Object.keys(this.registry.agentProfiles).forEach(k => agents.add(k));
     }
+    // From VS Code settings (defaults include gemini, copilot, claude, etc.)
+    const config = vscode.workspace.getConfiguration('skillfiles');
+    const settingsProfiles = config.get<Record<string, unknown>>('agentProfiles') || {};
+    Object.keys(settingsProfiles).forEach(k => agents.add(k));
     
     return Array.from(agents);
   }
