@@ -19,6 +19,7 @@ import { RollbackService } from './services/rollback-service.js';
 import { SkillsViewProvider } from './views/skills-view-provider.js';
 import { RepoStatusViewProvider } from './views/repo-status-view-provider.js';
 import { HistoryViewProvider } from './views/history-view-provider.js';
+import { VariablesViewProvider } from './views/variables-view-provider.js';
 
 // Commands
 import { registerCommands } from './commands/index.js';
@@ -103,6 +104,7 @@ export function activate(context: vscode.ExtensionContext) {
       templateEngine
     );
     const historyView = new HistoryViewProvider(registryStore, historyManager);
+    const variablesView = new VariablesViewProvider(registryStore, templateEngine);
 
     // 7. Register tree views using createTreeView for more reliable control
     console.log('[Skillfiles] Creating tree views...');
@@ -118,7 +120,11 @@ export function activate(context: vscode.ExtensionContext) {
       treeDataProvider: historyView,
       showCollapseAll: true
     });
-    context.subscriptions.push(skillsTreeView, repoStatusTreeView, historyTreeView);
+    const variablesTreeView = vscode.window.createTreeView('skillfiles.variablesView', {
+      treeDataProvider: variablesView,
+      showCollapseAll: true
+    });
+    context.subscriptions.push(skillsTreeView, repoStatusTreeView, historyTreeView, variablesTreeView);
     console.log('[Skillfiles] Tree views created successfully');
 
     // 8. Register commands
@@ -130,7 +136,8 @@ export function activate(context: vscode.ExtensionContext) {
       registryStore,
       skillsView,
       repoStatusView,
-      historyView
+      historyView,
+      variablesView
     });
 
     // 9. Watch for configuration changes
@@ -141,6 +148,7 @@ export function activate(context: vscode.ExtensionContext) {
           skillsView.refresh();
           repoStatusView.refresh();
           historyView.refresh();
+          variablesView.refresh();
           // Update context for Welcome Views
           void updateViewContexts(registryStore, historyManager);
         }
@@ -151,6 +159,7 @@ export function activate(context: vscode.ExtensionContext) {
     skillsView.refresh();
     repoStatusView.refresh();
     historyView.refresh();
+    variablesView.refresh();
     
     // Update context for Welcome Views (fire-and-forget)
     void updateViewContexts(registryStore, historyManager);
