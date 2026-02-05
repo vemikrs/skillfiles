@@ -18,6 +18,8 @@ on:
     paths:
       - "src/**"
       - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/**"
 
 permissions:
   contents: write
