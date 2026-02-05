@@ -65,7 +65,8 @@ async function main() {
     await buildTests();
   } else {
     await buildExtension();
-    if (!watch) {
+    // Only build tests in development mode
+    if (!watch && !production) {
       await buildTests();
     }
   }
