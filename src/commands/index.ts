@@ -675,18 +675,25 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
               repoName: string;
               repoPath: string;
               agent: string;
+              skillName: string;
               skillPath: string;
             }
             
             const discoveredSkills: DiscoveredSkill[] = [];
+            const path = await import('path');
             
             for (const repo of repos) {
               const skillFolders = await scanner.detectSkillFolders(repo.path);
               for (const skillFolder of skillFolders) {
+                // Extract skill name from folder path (parent directory of SKILL.md)
+                const skillDir = path.dirname(skillFolder.path);
+                const skillName = path.basename(skillDir);
+                
                 discoveredSkills.push({
                   repoName: repo.name,
                   repoPath: repo.path,
                   agent: skillFolder.agent,
+                  skillName,
                   skillPath: skillFolder.path
                 });
               }
@@ -701,8 +708,8 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
 
             // Show quick pick to select skills to import
             const items = discoveredSkills.map(skill => ({
-              label: `${skill.repoName}`,
-              description: `${skill.agent}`,
+              label: skill.skillName,
+              description: `${skill.agent} · ${skill.repoName}`,
               detail: skill.skillPath,
               skill
             }));
@@ -719,7 +726,6 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
 
             // Import selected skills
             const fs = await import('fs/promises');
-            const path = await import('path');
             const registry = await deps.registryStore.loadOrCreateRegistry();
             const registryPath = config.get<string>('registryPath') || '~/.skillfiles';
             const registryRoot = registryPath.replace(/^~/, process.env.HOME || '');
