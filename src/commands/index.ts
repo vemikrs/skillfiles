@@ -1242,7 +1242,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
     )
   );
 
-  // Manage targets command (remove targets from skill context)
+  // Manage targets command (add/remove targets from skill context)
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'skillfiles.manageTargets',
@@ -1256,56 +1256,71 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           const registry = await deps.registryStore.loadRegistry();
           const targets = registry.targets?.filter(t => t.skillName === item.skill.name) || [];
 
-          if (targets.length === 0) {
-            vscode.window.showInformationMessage(`No targets registered for skill: ${item.skill.name}`);
-            return;
+          // Build action options
+          interface ActionItem extends vscode.QuickPickItem {
+            action: 'add' | 'remove';
+            target?: typeof targets[0];
           }
 
-          // Show targets for selection
-          const targetItems = targets.map(t => ({
-            label: `${t.agent} · ${t.repoPath.split('/').pop()}`,
-            description: t.deployPath,
-            detail: t.repoPath,
-            target: t
-          }));
+          const items: ActionItem[] = [];
 
-          const selected = await vscode.window.showQuickPick(targetItems, {
-            placeHolder: 'Select target to remove',
-            title: `Manage Targets for ${item.skill.name}`,
-            canPickMany: true
+          // Add "Add Target" option
+          items.push({
+            label: '$(add) Add Target',
+            description: 'Add a new target repository',
+            action: 'add'
           });
 
-          if (!selected || selected.length === 0) {
+          // Add existing targets as "Remove" options
+          for (const t of targets) {
+            items.push({
+              label: `$(trash) ${t.agent} · ${t.repoPath.split('/').pop()}`,
+              description: t.deployPath,
+              detail: `Remove from: ${t.repoPath}`,
+              action: 'remove',
+              target: t
+            });
+          }
+
+          const selected = await vscode.window.showQuickPick(items, {
+            placeHolder: targets.length === 0 
+              ? 'No targets registered. Add one?' 
+              : 'Select action',
+            title: `Manage Targets for ${item.skill.name}`
+          });
+
+          if (!selected) {
             return;
           }
 
-          const confirm = await vscode.window.showWarningMessage(
-            `Remove ${selected.length} target(s)?`,
-            { modal: true },
-            'Remove', 'Cancel'
-          );
+          if (selected.action === 'add') {
+            // Redirect to addTarget command
+            await vscode.commands.executeCommand('skillfiles.addTarget', item);
+          } else if (selected.action === 'remove' && selected.target) {
+            const confirm = await vscode.window.showWarningMessage(
+              `Remove target: ${selected.target.agent} → ${selected.target.repoPath.split('/').pop()}?`,
+              { modal: true },
+              'Remove', 'Cancel'
+            );
 
-          if (confirm !== 'Remove') {
-            return;
-          }
+            if (confirm !== 'Remove') {
+              return;
+            }
 
-          // Remove selected targets
-          for (const sel of selected) {
+            // Remove the target
             const idx = registry.targets?.findIndex(
-              t => t.skillName === sel.target.skillName &&
-                   t.repoPath === sel.target.repoPath &&
-                   t.agent === sel.target.agent
+              t => t.skillName === selected.target!.skillName &&
+                   t.repoPath === selected.target!.repoPath &&
+                   t.agent === selected.target!.agent
             );
             if (idx !== undefined && idx !== -1) {
               registry.targets?.splice(idx, 1);
+              await deps.registryStore.saveRegistry(registry);
+              deps.skillsView.refresh();
+              deps.repoStatusView.refresh();
+              vscode.window.showInformationMessage(`Removed target from ${item.skill.name}.`);
             }
           }
-
-          await deps.registryStore.saveRegistry(registry);
-          deps.skillsView.refresh();
-          deps.repoStatusView.refresh();
-
-          vscode.window.showInformationMessage(`Removed ${selected.length} target(s) from ${item.skill.name}.`);
         } catch (error) {
           vscode.window.showErrorMessage(`Manage targets failed: ${error}`);
         }
