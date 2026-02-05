@@ -208,7 +208,34 @@ export function registerCommands(
       'skillfiles.previewSnapshot',
       async (skillName: string, snapshotId: string) => {
         try {
-          const content = await deps.historyManager.restoreSnapshot(skillName, snapshotId);
+          const path = await import('path');
+          const fs = await import('fs/promises');
+          const os = await import('os');
+          
+          // Build snapshot directory path
+          const config = vscode.workspace.getConfiguration('skillfiles');
+          const registryPath = config.get<string>('registryPath') 
+            || path.join(os.homedir(), '.skillfiles');
+          const snapshotDir = path.join(registryPath, 'skills', skillName, 'history', snapshotId);
+          
+          // Check for folder snapshot (has content/ directory)
+          const contentDir = path.join(snapshotDir, 'content');
+          let content: string;
+          
+          try {
+            await fs.stat(contentDir);
+            // Folder snapshot - look for SKILL.md in content/
+            const skillMdPath = path.join(contentDir, 'SKILL.md');
+            try {
+              content = await fs.readFile(skillMdPath, 'utf-8');
+            } catch {
+              // Fallback to skill.md (lowercase)
+              content = await fs.readFile(path.join(contentDir, 'skill.md'), 'utf-8');
+            }
+          } catch {
+            // File snapshot - use skill.md directly
+            content = await fs.readFile(path.join(snapshotDir, 'skill.md'), 'utf-8');
+          }
           
           const doc = await vscode.workspace.openTextDocument({
             content,
