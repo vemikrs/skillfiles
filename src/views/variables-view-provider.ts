@@ -17,12 +17,12 @@ export class VarLevelTreeItem extends vscode.TreeItem {
     public readonly collapsibleState: vscode.TreeItemCollapsibleState
   ) {
     const labels: Record<VarSource, string> = {
-      global: '🌐 Global',
-      repo: '📦 Repository',
-      agent: '🤖 Agent',
-      category: '📁 Category',
-      skill: '📄 Skill',
-      target: '🎯 Target'
+      global: 'Global',
+      repo: 'Repository',
+      agent: 'Agent',
+      category: 'Category',
+      skill: 'Skill',
+      target: 'Target'
     };
     super(levelKey ? `${labels[level]}: ${levelKey}` : labels[level], collapsibleState);
     
