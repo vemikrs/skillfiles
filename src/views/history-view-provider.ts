@@ -83,12 +83,13 @@ export class HistoryViewProvider implements vscode.TreeDataProvider<HistoryTreeE
       // Root level: list skills with history
       const items: HistorySkillTreeItem[] = [];
       
-      for (const skillName of Object.keys(this.registry.skills)) {
-        const snapshots = await this.getSnapshots(skillName);
+      // registry.skills is an array of Skill objects
+      for (const skill of this.registry.skills || []) {
+        const snapshots = await this.getSnapshots(skill.name);
         if (snapshots.length > 0) {
           items.push(
             new HistorySkillTreeItem(
-              skillName,
+              skill.name,
               snapshots.length,
               vscode.TreeItemCollapsibleState.Collapsed
             )
