@@ -226,6 +226,36 @@
         "title": "Set Category",
         "category": "Skillfiles",
         "icon": "$(folder)"
+      },
+      {
+        "command": "skillfiles.deleteResource",
+        "title": "Delete",
+        "category": "Skillfiles",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "skillfiles.renameResource",
+        "title": "Rename",
+        "category": "Skillfiles",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "skillfiles.revealInFinder",
+        "title": "Reveal in Finder",
+        "category": "Skillfiles",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "skillfiles.addResourceFile",
+        "title": "New File",
+        "category": "Skillfiles",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "skillfiles.addResourceFolder",
+        "title": "New Folder",
+        "category": "Skillfiles",
+        "icon": "$(new-folder)"
       }
     ],
     "viewsContainers": {
@@ -451,6 +481,46 @@
           "command": "skillfiles.rollbackSkill",
           "when": "view == skillfiles.historyView && viewItem == snapshot",
           "group": "inline"
+        },
+        {
+          "command": "skillfiles.addResourceFile",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "4_resource"
+        },
+        {
+          "command": "skillfiles.addResourceFolder",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "4_resource"
+        },
+        {
+          "command": "skillfiles.revealInFinder",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "5_reveal"
+        },
+        {
+          "command": "skillfiles.addResourceFile",
+          "when": "view == skillfiles.skillsView && viewItem == resourceFolder",
+          "group": "1_add"
+        },
+        {
+          "command": "skillfiles.addResourceFolder",
+          "when": "view == skillfiles.skillsView && viewItem == resourceFolder",
+          "group": "1_add"
+        },
+        {
+          "command": "skillfiles.renameResource",
+          "when": "view == skillfiles.skillsView && viewItem =~ /^resource/",
+          "group": "2_edit"
+        },
+        {
+          "command": "skillfiles.revealInFinder",
+          "when": "view == skillfiles.skillsView && viewItem =~ /^resource/",
+          "group": "3_reveal"
+        },
+        {
+          "command": "skillfiles.deleteResource",
+          "when": "view == skillfiles.skillsView && viewItem =~ /^resource/",
+          "group": "4_delete"
         }
       ]
     },

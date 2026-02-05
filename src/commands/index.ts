@@ -4,7 +4,7 @@ import type { CollectService } from '../services/collect-service.js';
 import type { RollbackService } from '../services/rollback-service.js';
 import type { HistoryManager } from '../core/history-manager.js';
 import type { RegistryStore } from '../core/registry-store.js';
-import type { SkillsViewProvider, SkillTreeItem } from '../views/skills-view-provider.js';
+import type { SkillsViewProvider, SkillTreeItem, ResourceTreeItem } from '../views/skills-view-provider.js';
 import type { RepoStatusViewProvider, TargetTreeItem, RepoTreeItem } from '../views/repo-status-view-provider.js';
 import type { HistoryViewProvider, SnapshotTreeItem } from '../views/history-view-provider.js';
 import type { VariablesViewProvider, VariableTreeItem, DefaultVariableTreeItem } from '../views/variables-view-provider.js';
@@ -1521,6 +1521,224 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           );
         } catch (error) {
           vscode.window.showErrorMessage(`Set category failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Delete resource command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.deleteResource',
+      async (item?: ResourceTreeItem) => {
+        if (!item) {
+          return;
+        }
+
+        const name = item.label?.toString() || '';
+        const type = item.isDirectory ? 'folder' : 'file';
+        
+        const confirm = await vscode.window.showWarningMessage(
+          `Delete ${type} "${name}"? This cannot be undone.`,
+          { modal: true },
+          'Delete'
+        );
+
+        if (confirm !== 'Delete') {
+          return;
+        }
+
+        try {
+          const fs = await import('fs/promises');
+          await fs.rm(item.resourcePath, { recursive: true });
+          deps.skillsView.refresh();
+          vscode.window.showInformationMessage(`Deleted ${type} "${name}"`);
+        } catch (error) {
+          vscode.window.showErrorMessage(`Delete failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Rename resource command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.renameResource',
+      async (item?: ResourceTreeItem) => {
+        if (!item) {
+          return;
+        }
+
+        const oldName = item.label?.toString() || '';
+        const newName = await vscode.window.showInputBox({
+          prompt: 'Enter new name',
+          value: oldName,
+          validateInput: (value) => {
+            if (!value || value.trim() === '') {
+              return 'Name cannot be empty';
+            }
+            if (value.includes('/') || value.includes('\\')) {
+              return 'Name cannot contain path separators';
+            }
+            return null;
+          }
+        });
+
+        if (!newName || newName === oldName) {
+          return;
+        }
+
+        try {
+          const fs = await import('fs/promises');
+          const path = await import('path');
+          const dir = path.dirname(item.resourcePath);
+          const newPath = path.join(dir, newName);
+          
+          await fs.rename(item.resourcePath, newPath);
+          deps.skillsView.refresh();
+          vscode.window.showInformationMessage(`Renamed to "${newName}"`);
+        } catch (error) {
+          vscode.window.showErrorMessage(`Rename failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Reveal in Finder command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.revealInFinder',
+      async (item?: ResourceTreeItem | SkillTreeItem) => {
+        let pathToReveal: string | undefined;
+
+        if (item instanceof Object && 'resourcePath' in item) {
+          pathToReveal = (item as ResourceTreeItem).resourcePath;
+        } else if (item instanceof Object && 'skill' in item) {
+          pathToReveal = (item as SkillTreeItem).skill.folderPath;
+        }
+
+        if (!pathToReveal) {
+          return;
+        }
+
+        try {
+          await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(pathToReveal));
+        } catch (error) {
+          vscode.window.showErrorMessage(`Reveal in Finder failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Add file to skill/folder command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.addResourceFile',
+      async (item?: SkillTreeItem | ResourceTreeItem) => {
+        let targetFolder: string | undefined;
+
+        if (item instanceof Object && 'skill' in item) {
+          targetFolder = (item as SkillTreeItem).skill.folderPath;
+        } else if (item instanceof Object && 'resourcePath' in item && (item as ResourceTreeItem).isDirectory) {
+          targetFolder = (item as ResourceTreeItem).resourcePath;
+        }
+
+        if (!targetFolder) {
+          vscode.window.showErrorMessage('Please select a skill or folder');
+          return;
+        }
+
+        const fileName = await vscode.window.showInputBox({
+          prompt: 'Enter file name',
+          placeHolder: 'example.md',
+          validateInput: (value) => {
+            if (!value || value.trim() === '') {
+              return 'File name cannot be empty';
+            }
+            if (value.includes('/') || value.includes('\\')) {
+              return 'File name cannot contain path separators';
+            }
+            return null;
+          }
+        });
+
+        if (!fileName) {
+          return;
+        }
+
+        try {
+          const fs = await import('fs/promises');
+          const path = await import('path');
+          const filePath = path.join(targetFolder, fileName);
+          
+          // Check if file exists
+          try {
+            await fs.access(filePath);
+            vscode.window.showErrorMessage(`File "${fileName}" already exists`);
+            return;
+          } catch {
+            // File doesn't exist, proceed
+          }
+
+          await fs.writeFile(filePath, '', 'utf-8');
+          deps.skillsView.refresh();
+          
+          // Open the new file
+          const doc = await vscode.workspace.openTextDocument(filePath);
+          await vscode.window.showTextDocument(doc);
+        } catch (error) {
+          vscode.window.showErrorMessage(`Create file failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Add folder to skill/folder command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.addResourceFolder',
+      async (item?: SkillTreeItem | ResourceTreeItem) => {
+        let targetFolder: string | undefined;
+
+        if (item instanceof Object && 'skill' in item) {
+          targetFolder = (item as SkillTreeItem).skill.folderPath;
+        } else if (item instanceof Object && 'resourcePath' in item && (item as ResourceTreeItem).isDirectory) {
+          targetFolder = (item as ResourceTreeItem).resourcePath;
+        }
+
+        if (!targetFolder) {
+          vscode.window.showErrorMessage('Please select a skill or folder');
+          return;
+        }
+
+        const folderName = await vscode.window.showInputBox({
+          prompt: 'Enter folder name',
+          placeHolder: 'scripts',
+          validateInput: (value) => {
+            if (!value || value.trim() === '') {
+              return 'Folder name cannot be empty';
+            }
+            if (value.includes('/') || value.includes('\\')) {
+              return 'Folder name cannot contain path separators';
+            }
+            return null;
+          }
+        });
+
+        if (!folderName) {
+          return;
+        }
+
+        try {
+          const fs = await import('fs/promises');
+          const path = await import('path');
+          const folderPath = path.join(targetFolder, folderName);
+          
+          await fs.mkdir(folderPath, { recursive: true });
+          deps.skillsView.refresh();
+          vscode.window.showInformationMessage(`Created folder "${folderName}"`);
+        } catch (error) {
+          vscode.window.showErrorMessage(`Create folder failed: ${error}`);
         }
       }
     )
