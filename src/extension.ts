@@ -94,7 +94,8 @@ async function detectUnregisteredHomeSkills(registryStore: RegistryStore): Promi
  */
 async function promptCollectHomeSkills(
   unregistered: DetectedSkill[],
-  collectService: { collect: (opts: { skillName: string; sourceFolderPath: string; registryRoot: string }) => Promise<unknown> },
+  collectService: CollectService,
+  registryStore: RegistryStore,
   registryRoot: string,
   onComplete: () => void
 ): Promise<void> {
@@ -108,23 +109,39 @@ async function promptCollectHomeSkills(
   );
 
   if (action === 'Collect All') {
+    const registry = await registryStore.loadOrCreateRegistry();
     let collected = 0;
     for (const skill of unregistered) {
       try {
-        await collectService.collect({
+        const result = await collectService.collect({
           skillName: skill.name,
           sourceFolderPath: skill.sourcePath,
           registryRoot
         });
+        
+        // Register skill in registry if not already present
+        if (!registry.skills.find(s => s.name === skill.name)) {
+          registry.skills.push({
+            name: skill.name,
+            scope: 'shared',
+            registryPath: `skills/${skill.name}`,
+            folderPath: result.skillFolderPath,
+            targets: []
+          });
+        }
         collected++;
       } catch (error) {
         console.warn(`[Skillfiles] Failed to collect ${skill.name}:`, error);
       }
     }
+    
+    // Persist registry changes
+    await registryStore.saveRegistry(registry);
     vscode.window.showInformationMessage(`Collected ${collected} skill(s) to registry.`);
     onComplete();
   }
 }
+
 
 /**
  * Update VS Code context variables for Welcome View visibility.
@@ -269,7 +286,7 @@ export function activate(context: vscode.ExtensionContext) {
     // 11. Detect and offer to collect skills from home directories
     void detectUnregisteredHomeSkills(registryStore).then(unregistered => {
       if (unregistered.length > 0) {
-        void promptCollectHomeSkills(unregistered, collectService, registryPath, () => {
+        void promptCollectHomeSkills(unregistered, collectService, registryStore, registryPath, () => {
           skillsView.refresh();
           repoStatusView.refresh();
           variablesView.refresh();
