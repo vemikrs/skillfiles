@@ -7,11 +7,15 @@ describe('PathResolver', () => {
     agentProfiles: {
       copilot: {
         vendor: 'github',
-        defaultDeployPath: '.github/copilot-instructions.md'
+        instructionPaths: ['.github/copilot-instructions.md', 'AGENTS.md'],
+        skillFolderPath: '.github/skills',
+        skillFileName: 'SKILL.md'
       },
       claude: {
-        vendor: 'anthropic', 
-        defaultDeployPath: '.claude/skill.md'
+        vendor: 'anthropic',
+        instructionPaths: ['CLAUDE.md'],
+        skillFolderPath: '.claude/skills',
+        skillFileName: 'SKILL.md'
       }
     },
     skills: []
@@ -50,32 +54,41 @@ describe('PathResolver', () => {
   });
 
   describe('resolveDeployPath', () => {
-    it('should resolve deployPath relative to repo root', () => {
+    it('should resolve deployPath using skill folder structure', () => {
       const resolver = new PathResolver(sampleRegistry, scanRoots, '/Users/mi/.skillfiles');
       const repoRoot = '/Users/mi/work/myproject';
-      const result = resolver.resolveDeployPath(repoRoot, 'copilot', undefined);
-      expect(result).to.equal('/Users/mi/work/myproject/.github/copilot-instructions.md');
+      const result = resolver.resolveDeployPath(repoRoot, 'copilot', 'my-skill', undefined);
+      expect(result).to.equal('/Users/mi/work/myproject/.github/skills/my-skill/SKILL.md');
     });
 
-    it('should use agentProfile defaultDeployPath when deployPath omitted', () => {
+    it('should use agentProfile skillFolderPath when deployPath omitted', () => {
       const resolver = new PathResolver(sampleRegistry, scanRoots, '/Users/mi/.skillfiles');
       const repoRoot = '/Users/mi/work/myproject';
-      const result = resolver.resolveDeployPath(repoRoot, 'claude', undefined);
-      expect(result).to.equal('/Users/mi/work/myproject/.claude/skill.md');
+      const result = resolver.resolveDeployPath(repoRoot, 'claude', 'my-skill', undefined);
+      expect(result).to.equal('/Users/mi/work/myproject/.claude/skills/my-skill/SKILL.md');
     });
 
     it('should use explicit deployPath when provided', () => {
       const resolver = new PathResolver(sampleRegistry, scanRoots, '/Users/mi/.skillfiles');
       const repoRoot = '/Users/mi/work/myproject';
-      const result = resolver.resolveDeployPath(repoRoot, 'copilot', 'custom/skill.md');
+      const result = resolver.resolveDeployPath(repoRoot, 'copilot', 'my-skill', 'custom/skill.md');
       expect(result).to.equal('/Users/mi/work/myproject/custom/skill.md');
     });
 
     it('should throw when agent not found in registry', () => {
       const resolver = new PathResolver(sampleRegistry, scanRoots, '/Users/mi/.skillfiles');
       const repoRoot = '/Users/mi/work/myproject';
-      expect(() => resolver.resolveDeployPath(repoRoot, 'unknown', undefined))
+      expect(() => resolver.resolveDeployPath(repoRoot, 'unknown', 'my-skill', undefined))
         .to.throw('Agent profile not found: unknown');
+    });
+  });
+
+  describe('resolveSkillFolderPath', () => {
+    it('should resolve skill folder path without filename', () => {
+      const resolver = new PathResolver(sampleRegistry, scanRoots, '/Users/mi/.skillfiles');
+      const repoRoot = '/Users/mi/work/myproject';
+      const result = resolver.resolveSkillFolderPath(repoRoot, 'copilot', 'my-skill');
+      expect(result).to.equal('/Users/mi/work/myproject/.github/skills/my-skill');
     });
   });
 

@@ -26,7 +26,10 @@ describe('RegistryStore', () => {
 agentProfiles:
   copilot:
     vendor: github
-    defaultDeployPath: .github/copilot-instructions.md
+    instructionPaths:
+      - .github/copilot-instructions.md
+    skillFolderPath: .github/skills
+    skillFileName: SKILL.md
 skills:
   - name: test-skill
     scope: repo
@@ -75,7 +78,12 @@ skills:
       const store = new RegistryStore(tempDir);
       const registry = {
         agentProfiles: {
-          copilot: { vendor: 'github', defaultDeployPath: '.github/copilot-instructions.md' }
+          copilot: {
+            vendor: 'github',
+            instructionPaths: ['.github/copilot-instructions.md'],
+            skillFolderPath: '.github/skills',
+            skillFileName: 'SKILL.md'
+          }
         },
         skills: []
       };
