@@ -3,18 +3,18 @@
   "displayName": "Skillfiles",
   "description": "Centrally manage AI agent skill definitions across repositories",
   "version": "0.1.2",
-  "publisher": "mi",
+  "publisher": "ve",
   "license": "MIT",
   "packageManager": "pnpm@10.28.2",
   "icon": "resources/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mi/skillfiles"
+    "url": "https://github.com/vemikrs/skillfiles"
   },
   "bugs": {
-    "url": "https://github.com/mi/skillfiles/issues"
+    "url": "https://github.com/vemikrs/skillfiles/issues"
   },
-  "homepage": "https://github.com/mi/skillfiles#readme",
+  "homepage": "https://github.com/vemikrs/skillfiles#readme",
   "keywords": [
     "ai",
     "agent",
@@ -420,10 +420,10 @@
     "esbuild": "pnpm run esbuild-base -- --sourcemap",
     "esbuild-watch": "pnpm run esbuild-base -- --sourcemap --watch",
     "compile": "pnpm run esbuild",
-    "compile:test": "tsc -p ./tsconfig.test.json",
+    "compile:test": "node esbuild.mjs --test",
     "typecheck": "tsc -p ./ --noEmit",
     "watch": "pnpm run esbuild-watch",
-    "pretest": "pnpm run compile && pnpm run compile:test",
+    "pretest": "pnpm run compile",
     "test": "pnpm run test:unit",
     "test:unit": "mocha 'out/test/unit/**/*.test.js'",
     "test:e2e": "node ./out/test/runTest.js",

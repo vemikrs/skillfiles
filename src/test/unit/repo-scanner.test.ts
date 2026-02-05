@@ -104,9 +104,8 @@ describe('RepoScanner', () => {
     it('should detect multiple agent skill files', async () => {
       const repoPath = path.join(tempDir, 'multi-agent');
       fs.mkdirSync(path.join(repoPath, '.github'), { recursive: true });
-      fs.mkdirSync(path.join(repoPath, '.claude'), { recursive: true });
       fs.writeFileSync(path.join(repoPath, '.github', 'copilot-instructions.md'), '# Copilot');
-      fs.writeFileSync(path.join(repoPath, '.claude', 'skill.md'), '# Claude');
+      fs.writeFileSync(path.join(repoPath, 'CLAUDE.md'), '# Claude');
       
       const scanRoots: ScanRoot[] = [{ key: 'test', path: tempDir }];
       const scanner = new RepoScanner(scanRoots);
