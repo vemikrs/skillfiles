@@ -619,6 +619,12 @@
         "skillfiles.agentProfiles": {
           "type": "object",
           "default": {
+            "agent": {
+              "vendor": "agentskills.io",
+              "instructionPaths": ["AGENTS.md"],
+              "skillFolderPath": ".agent/skills",
+              "skillFileName": "SKILL.md"
+            },
             "gemini": {
               "vendor": "google",
               "instructionPaths": ["GEMINI.md", ".gemini/styleguide.md"],
