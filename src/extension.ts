@@ -152,20 +152,20 @@ async function updateViewContexts(
 ): Promise<void> {
   try {
     const registry = await registryStore.loadRegistry();
-    const skills = Object.keys(registry.skills || {});
+    const skills = registry.skills || [];
     const targets = registry.targets || [];
     
     // Check if any skill has history
     let hasHistory = false;
-    for (const skillName of skills) {
-      const snapshots = await historyManager.listSnapshots(skillName);
+    for (const skill of skills) {
+      const snapshots = await historyManager.listSnapshots(skill.name);
       if (snapshots.length > 0) {
         hasHistory = true;
         break;
       }
     }
     
-    // Set context variables
+    // Set context variables for Welcome View visibility
     await vscode.commands.executeCommand('setContext', 'skillfiles.noSkills', skills.length === 0);
     await vscode.commands.executeCommand('setContext', 'skillfiles.noRepos', targets.length === 0);
     await vscode.commands.executeCommand('setContext', 'skillfiles.noHistory', !hasHistory);
