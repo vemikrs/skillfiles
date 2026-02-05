@@ -1785,4 +1785,92 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
       }
     )
   );
+
+  // Validate skill command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.validateSkill',
+      async (item?: SkillTreeItem) => {
+        if (!item?.skill.folderPath) {
+          vscode.window.showErrorMessage('Please select a skill to validate');
+          return;
+        }
+
+        try {
+          const { validateSkill, formatValidationResult } = await import('../core/skill-validator.js');
+          const result = await validateSkill(item.skill.folderPath);
+          const output = formatValidationResult(result, item.skill.name);
+          
+          // Show in output channel
+          const channel = vscode.window.createOutputChannel('Skillfiles Validation');
+          channel.clear();
+          channel.appendLine(output);
+          channel.show();
+
+          if (result.valid && result.warnings.length === 0) {
+            vscode.window.showInformationMessage(`✅ ${item.skill.name}: Valid`);
+          } else if (result.valid) {
+            vscode.window.showWarningMessage(`⚠️ ${item.skill.name}: Valid with warnings`);
+          } else {
+            vscode.window.showErrorMessage(`❌ ${item.skill.name}: Invalid`);
+          }
+        } catch (error) {
+          vscode.window.showErrorMessage(`Validation failed: ${error}`);
+        }
+      }
+    )
+  );
+
+  // Validate all skills command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.validateAllSkills',
+      async () => {
+        try {
+          const registry = await deps.registryStore.loadRegistry();
+          const { validateSkill, formatValidationResult } = await import('../core/skill-validator.js');
+          
+          const channel = vscode.window.createOutputChannel('Skillfiles Validation');
+          channel.clear();
+          channel.appendLine('=== Validating All Skills ===\n');
+          channel.show();
+
+          let validCount = 0;
+          let invalidCount = 0;
+          let warningCount = 0;
+
+          for (const skill of registry.skills) {
+            if (!skill.folderPath) {
+              channel.appendLine(`⚠️ ${skill.name}: No folder path`);
+              warningCount++;
+              continue;
+            }
+
+            const result = await validateSkill(skill.folderPath);
+            channel.appendLine(formatValidationResult(result, skill.name));
+            channel.appendLine('');
+
+            if (result.valid && result.warnings.length === 0) {
+              validCount++;
+            } else if (result.valid) {
+              warningCount++;
+            } else {
+              invalidCount++;
+            }
+          }
+
+          channel.appendLine('=== Summary ===');
+          channel.appendLine(`✅ Valid: ${validCount}`);
+          channel.appendLine(`⚠️ Warnings: ${warningCount}`);
+          channel.appendLine(`❌ Invalid: ${invalidCount}`);
+
+          vscode.window.showInformationMessage(
+            `Validation complete: ${validCount} valid, ${warningCount} warnings, ${invalidCount} invalid`
+          );
+        } catch (error) {
+          vscode.window.showErrorMessage(`Validation failed: ${error}`);
+        }
+      }
+    )
+  );
 }

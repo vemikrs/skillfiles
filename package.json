@@ -256,6 +256,18 @@
         "title": "New Folder",
         "category": "Skillfiles",
         "icon": "$(new-folder)"
+      },
+      {
+        "command": "skillfiles.validateSkill",
+        "title": "Validate Skill",
+        "category": "Skillfiles",
+        "icon": "$(check)"
+      },
+      {
+        "command": "skillfiles.validateAllSkills",
+        "title": "Validate All Skills",
+        "category": "Skillfiles",
+        "icon": "$(checklist)"
       }
     ],
     "viewsContainers": {
@@ -411,6 +423,11 @@
           "command": "skillfiles.pushSkill",
           "when": "view == skillfiles.skillsView && viewItem == skill",
           "group": "inline"
+        },
+        {
+          "command": "skillfiles.validateSkill",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "3_validate"
         },
         {
           "command": "skillfiles.pushAllInRepo",
