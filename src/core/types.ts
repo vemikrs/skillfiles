@@ -43,6 +43,12 @@ export interface Registry {
   agentProfiles: Record<string, AgentProfile>;
   skills: Skill[];
   targets?: Target[];
+  
+  // Hierarchical variables (priority: Target > Skill > Category > Agent > Repo > Global)
+  globalVars?: Record<string, string>;
+  repoVars?: Record<string, Record<string, string>>;    // key: repoPath
+  agentVars?: Record<string, Record<string, string>>;   // key: agent name
+  categoryVars?: Record<string, Record<string, string>>; // key: category name
 }
 
 export interface Meta {
