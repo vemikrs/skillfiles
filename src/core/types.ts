@@ -8,7 +8,12 @@ export type TargetStatus = 'synced' | 'modified' | 'missing' | 'needs-vars';
 
 export interface AgentProfile {
   vendor: string;
-  defaultDeployPath: string;
+  /** Instruction file paths - not managed by Skillfiles, for reference only */
+  instructionPaths: string[];
+  /** Folder path where skills are deployed (e.g., '.github/skills') */
+  skillFolderPath: string;
+  /** Skill file name pattern (e.g., 'SKILL.md') */
+  skillFileName: string;
 }
 
 export interface Target {
