@@ -1,26 +1,38 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { Skill, Registry } from '../core/types.js';
+import type { Skill, Registry, SkillMetadata } from '../core/types.js';
 import type { RegistryStore } from '../core/registry-store.js';
+import { parseSkillFolder } from '../core/skill-parser.js';
 
 /**
  * Tree item for skill entries.
  */
 export class SkillTreeItem extends vscode.TreeItem {
+  public metadata: SkillMetadata | null = null;
+
   constructor(
     public readonly skill: Skill,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
+    metadata?: SkillMetadata | null
   ) {
     super(skill.name, collapsibleState);
-    this.tooltip = skill.description || skill.name;
+    this.metadata = metadata || null;
+    
+    // Use parsed description from frontmatter, fallback to skill.description
+    const desc = metadata?.description || skill.description;
+    this.tooltip = desc ? new vscode.MarkdownString(`**${skill.name}**\n\n${desc}`) : skill.name;
     this.description = skill.scope;
     this.contextValue = 'skill';
     
-    // Set icon based on scope
-    this.iconPath = new vscode.ThemeIcon(
-      skill.scope === 'shared' ? 'globe' : 'file-code'
-    );
+    // Set icon based on scope and metadata
+    if (metadata?.disableModelInvocation) {
+      this.iconPath = new vscode.ThemeIcon('lock');
+    } else {
+      this.iconPath = new vscode.ThemeIcon(
+        skill.scope === 'shared' ? 'globe' : 'file-code'
+      );
+    }
 
     // Click to open skill file
     this.command = {
@@ -151,18 +163,17 @@ export class SkillsViewProvider implements vscode.TreeDataProvider<SkillsTreeEle
             )
         );
       } else {
-        // Flat list - skills are now expandable
-        return skills.map(
-          skill =>
-            new SkillTreeItem(skill, vscode.TreeItemCollapsibleState.Collapsed)
+        // Flat list - skills are now expandable with metadata
+        return Promise.all(
+          skills.map(skill => this.createSkillTreeItem(skill))
         );
       }
     }
 
     if (element instanceof CategoryTreeItem) {
-      // Category children: skills (now expandable)
-      return element.skills.map(
-        skill => new SkillTreeItem(skill, vscode.TreeItemCollapsibleState.Collapsed)
+      // Category children: skills (now expandable) - load metadata for each
+      return Promise.all(
+        element.skills.map(skill => this.createSkillTreeItem(skill))
       );
     }
 
@@ -177,6 +188,23 @@ export class SkillsViewProvider implements vscode.TreeDataProvider<SkillsTreeEle
     }
 
     return [];
+  }
+
+  /**
+   * Create a SkillTreeItem with loaded metadata.
+   */
+  private async createSkillTreeItem(skill: Skill): Promise<SkillTreeItem> {
+    let metadata: SkillMetadata | null = null;
+    
+    if (skill.folderPath) {
+      try {
+        metadata = await parseSkillFolder(skill.folderPath);
+      } catch {
+        // Ignore parse errors, use default
+      }
+    }
+    
+    return new SkillTreeItem(skill, vscode.TreeItemCollapsibleState.Collapsed, metadata);
   }
 
   /**

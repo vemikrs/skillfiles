@@ -16,6 +16,38 @@ export interface AgentProfile {
   skillFileName: string;
 }
 
+/**
+ * Compatibility configuration for skills (agentskills.io standard)
+ */
+export interface CompatibilityConfig {
+  /** List of compatible agents */
+  agents?: string[];
+  /** Minimum agent version requirements */
+  minVersions?: Record<string, string>;
+  /** Required environment variables */
+  envVars?: string[];
+}
+
+/**
+ * Skill metadata parsed from YAML frontmatter (agentskills.io standard)
+ */
+export interface SkillMetadata {
+  /** Short identifier for the skill */
+  name: string;
+  /** Description of what the skill does and when to use it */
+  description?: string;
+  /** License for the skill */
+  license?: string;
+  /** Compatibility requirements */
+  compatibility?: CompatibilityConfig;
+  /** Arbitrary key-value metadata */
+  metadata?: Record<string, unknown>;
+  /** If true, skill won't be automatically applied */
+  disableModelInvocation?: boolean;
+  /** Skill version */
+  version?: string;
+}
+
 export interface Target {
   skillName: string;
   repoPath: string;
