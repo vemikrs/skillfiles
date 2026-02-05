@@ -873,6 +873,149 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
     )
   );
 
+  // Scan shared skills from user home directories (e.g., ~/.agent, ~/.gemini)
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'skillfiles.scanSharedSkills',
+      async () => {
+        try {
+          const path = await import('path');
+          const fs = await import('fs/promises');
+          const os = await import('os');
+          
+          const config = vscode.workspace.getConfiguration('skillfiles');
+          const agentProfiles = config.get<Record<string, {vendor: string; skillFolderPath: string; skillFileName: string}>>('agentProfiles') || {};
+          const registryPath = config.get<string>('registryPath') || path.join(os.homedir(), '.skillfiles');
+
+          await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Scanning shared skill directories...',
+            cancellable: false
+          }, async (progress) => {
+            interface FoundSkill {
+              agent: string;
+              name: string;
+              folderPath: string;
+            }
+            
+            const foundSkills: FoundSkill[] = [];
+
+            // Scan each agent's home directory
+            for (const [agentName, profile] of Object.entries(agentProfiles)) {
+              const folderBase = profile.skillFolderPath.split('/')[0] || `.${agentName}`;
+              const agentSkillsDir = path.join(os.homedir(), folderBase, 'skills');
+              
+              progress.report({ message: `Checking ~/${folderBase}/skills/...` });
+              
+              try {
+                const entries = await fs.readdir(agentSkillsDir, { withFileTypes: true });
+                
+                for (const entry of entries) {
+                  if (entry.isDirectory()) {
+                    // Check for SKILL.md file
+                    const skillMdPath = path.join(agentSkillsDir, entry.name, 'SKILL.md');
+                    try {
+                      await fs.stat(skillMdPath);
+                      foundSkills.push({
+                        agent: agentName,
+                        name: entry.name,
+                        folderPath: path.join(agentSkillsDir, entry.name)
+                      });
+                    } catch {
+                      // No SKILL.md, skip
+                    }
+                  }
+                }
+              } catch {
+                // Directory doesn't exist, skip
+              }
+            }
+
+            if (foundSkills.length === 0) {
+              vscode.window.showInformationMessage(
+                'No shared skills found in user home directories.'
+              );
+              return;
+            }
+
+            // Show quick pick to select skills to import
+            const items = foundSkills.map(s => ({
+              label: s.name,
+              description: `~/.${s.agent.replace('.', '')}/skills/`,
+              detail: s.agent,
+              picked: true,
+              skill: s
+            }));
+
+            const selected = await vscode.window.showQuickPick(items, {
+              canPickMany: true,
+              placeHolder: `Found ${foundSkills.length} skill(s). Select which to import.`,
+              title: 'Import Shared Skills'
+            });
+
+            if (!selected || selected.length === 0) {
+              return;
+            }
+
+            // Import selected skills
+            const registry = await deps.registryStore.loadRegistry();
+            let importCount = 0;
+
+            for (const item of selected) {
+              const skill = item.skill;
+              
+              // Check if already registered
+              if (registry.skills.some(s => s.name === skill.name && s.scope === 'shared')) {
+                continue;
+              }
+
+              // Copy to registry
+              const skillDir = path.join(registryPath, 'skills', skill.name);
+              await fs.mkdir(skillDir, { recursive: true });
+
+              // Recursive copy function
+              const copyDir = async (src: string, dest: string) => {
+                await fs.mkdir(dest, { recursive: true });
+                const entries = await fs.readdir(src, { withFileTypes: true });
+                for (const entry of entries) {
+                  const srcPath = path.join(src, entry.name);
+                  const destPath = path.join(dest, entry.name);
+                  if (entry.isDirectory()) {
+                    await copyDir(srcPath, destPath);
+                  } else {
+                    await fs.copyFile(srcPath, destPath);
+                  }
+                }
+              };
+              await copyDir(skill.folderPath, skillDir);
+
+              // Add to registry as shared skill
+              registry.skills.push({
+                name: skill.name,
+                scope: 'shared',
+                registryPath: `skills/${skill.name}`,
+                folderPath: skillDir,
+                targets: []
+              });
+
+              importCount++;
+            }
+
+            await deps.registryStore.saveRegistry(registry);
+            deps.skillsView.refresh();
+            deps.repoStatusView.refresh();
+
+            vscode.window.showInformationMessage(
+              `Imported ${importCount} shared skill(s).`
+            );
+          });
+        } catch (error) {
+          vscode.window.showErrorMessage(`Import shared skills failed: ${error}`);
+        }
+      }
+    )
+  );
+
   // Open target file command
   context.subscriptions.push(
     vscode.commands.registerCommand(

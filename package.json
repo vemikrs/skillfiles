@@ -138,6 +138,12 @@
         "icon": "$(search)"
       },
       {
+        "command": "skillfiles.scanSharedSkills",
+        "title": "Import Shared Skills",
+        "category": "Skillfiles",
+        "icon": "$(cloud-download)"
+      },
+      {
         "command": "skillfiles.copySkillPath",
         "title": "Copy Skill Path",
         "category": "Skillfiles",
@@ -312,12 +318,12 @@
     "viewsWelcome": [
       {
         "view": "skillfiles.skillsView",
-        "contents": "Get Started!\n\n[$(search) Scan Repositories](command:skillfiles.discoverSkills)\nDiscover and import existing skill files\n\n[$(add) Create New Skill](command:skillfiles.createSkill)\n\n[$(folder-opened) Setup Scan Roots](command:skillfiles.setupScanRoots)",
+        "contents": "Get Started!\n\n[$(cloud-download) Import Shared Skills](command:skillfiles.scanSharedSkills)\nImport skills from ~/.agent/, ~/.gemini/, etc.\n\n[$(search) Scan Repositories](command:skillfiles.discoverSkills)\nDiscover skills from scan roots\n\n[$(add) Create New Skill](command:skillfiles.createSkill)\n\n[$(folder-opened) Setup Scan Roots](command:skillfiles.setupScanRoots)",
         "when": "skillfiles.noSkills"
       },
       {
         "view": "skillfiles.repoStatusView",
-        "contents": "No repositories registered.\n\n[$(search) Scan Repositories](command:skillfiles.discoverSkills)\n\n[$(folder-opened) Setup Scan Roots](command:skillfiles.setupScanRoots)",
+        "contents": "No targets registered.\n\n[$(cloud-download) Import Shared Skills](command:skillfiles.scanSharedSkills)\n\n[$(search) Scan Repositories](command:skillfiles.discoverSkills)\n\n[$(folder-opened) Setup Scan Roots](command:skillfiles.setupScanRoots)",
         "when": "skillfiles.noRepos"
       },
       {
@@ -340,6 +346,11 @@
         },
         {
           "command": "skillfiles.discoverSkills",
+          "when": "view == skillfiles.skillsView",
+          "group": "navigation"
+        },
+        {
+          "command": "skillfiles.scanSharedSkills",
           "when": "view == skillfiles.skillsView",
           "group": "navigation"
         },
