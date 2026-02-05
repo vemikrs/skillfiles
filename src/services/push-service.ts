@@ -12,12 +12,14 @@ export interface PushServiceOptions {
 }
 
 /**
- * Parameters for push operation.
+ * Parameters for push operation (folder-based).
  */
 export interface PushParams {
   skillName: string;
-  skillPath: string;
-  deployPath: string;
+  /** Path to the source skill folder in registry */
+  skillFolderPath: string;
+  /** Path to deploy folder in repository */
+  deployFolderPath: string;
   vars: Record<string, string>;
   context: TemplateContext;
 }
@@ -27,8 +29,8 @@ export interface PushParams {
  */
 export interface PushResult {
   success: boolean;
-  expandedContent: string;
-  deployPath: string;
+  deployFolderPath: string;
+  filesCount: number;
 }
 
 /**
@@ -47,48 +49,111 @@ export class PushService {
   }
 
   /**
-   * Push a skill to a deployment path.
+   * Push a skill folder to a deployment path.
+   * Expands templates in ALL files.
    */
   async push(params: PushParams): Promise<PushResult> {
-    const { skillName, skillPath, deployPath, vars, context } = params;
+    const { skillName, skillFolderPath, deployFolderPath, vars, context } = params;
 
-    // Read skill template
-    const template = await fs.readFile(skillPath, 'utf-8');
-
-    // Expand template
-    const expandedContent = this.templateEngine.expand(template, vars, context);
-
-    // Save history of existing file if present
+    // Backup existing deploy folder to history if present
     try {
-      const existingContent = await fs.readFile(deployPath, 'utf-8');
-      await this.historyManager.saveSnapshot(skillName, existingContent);
+      const existingStat = await fs.stat(deployFolderPath);
+      if (existingStat.isDirectory()) {
+        await this.historyManager.saveFolderSnapshot(skillName, deployFolderPath);
+      }
     } catch (error) {
-      // File doesn't exist, no history to save
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw error;
       }
     }
 
-    // Write to deploy path (unless dry run)
+    // Remove existing deploy folder (handles deleted resources)
     if (!this.dryRun) {
-      const dir = path.dirname(deployPath);
-      await fs.mkdir(dir, { recursive: true });
-      await fs.writeFile(deployPath, expandedContent, 'utf-8');
+      await fs.rm(deployFolderPath, { recursive: true, force: true });
     }
+
+    // Copy and expand all files
+    const filesCount = await this.copyWithTemplateExpansion(
+      skillFolderPath, 
+      deployFolderPath, 
+      vars, 
+      context
+    );
 
     // Audit log
     await this.auditLog.append({
       operation: 'push',
       scope: context.scope ?? 'repo',
       skillName,
-      target: deployPath,
+      target: deployFolderPath,
       result: 'success'
     });
 
     return {
       success: true,
-      expandedContent,
-      deployPath
+      deployFolderPath,
+      filesCount
     };
+  }
+
+  /**
+   * Recursively copy directory with template expansion on all text files.
+   */
+  private async copyWithTemplateExpansion(
+    src: string, 
+    dest: string, 
+    vars: Record<string, string>,
+    context: TemplateContext
+  ): Promise<number> {
+    if (this.dryRun) {
+      return 0;
+    }
+
+    await fs.mkdir(dest, { recursive: true });
+    const entries = await fs.readdir(src, { withFileTypes: true });
+    let filesCount = 0;
+
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+
+      // Skip history directory
+      if (entry.name === 'history') {
+        continue;
+      }
+
+      if (entry.isDirectory()) {
+        filesCount += await this.copyWithTemplateExpansion(srcPath, destPath, vars, context);
+      } else {
+        // Check if file is text-based (should have template expansion)
+        if (this.isTextFile(entry.name)) {
+          const template = await fs.readFile(srcPath, 'utf-8');
+          const expandedContent = this.templateEngine.expand(template, vars, context);
+          await fs.writeFile(destPath, expandedContent, 'utf-8');
+        } else {
+          // Binary file - copy as-is
+          await fs.copyFile(srcPath, destPath);
+        }
+        filesCount++;
+      }
+    }
+
+    return filesCount;
+  }
+
+  /**
+   * Check if a file is text-based and should have template expansion.
+   */
+  private isTextFile(filename: string): boolean {
+    const textExtensions = [
+      '.md', '.txt', '.yaml', '.yml', '.json', '.js', '.ts', '.jsx', '.tsx',
+      '.py', '.rb', '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd',
+      '.html', '.css', '.scss', '.sass', '.less', '.xml', '.svg',
+      '.go', '.rs', '.java', '.kt', '.swift', '.c', '.cpp', '.h', '.hpp',
+      '.toml', '.ini', '.cfg', '.conf', '.env', '.properties'
+    ];
+    
+    const ext = path.extname(filename).toLowerCase();
+    return textExtensions.includes(ext) || filename.startsWith('.');
   }
 }
