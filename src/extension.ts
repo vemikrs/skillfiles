@@ -37,13 +37,20 @@ const USER_HOME_SKILL_DIRS = [
   { agent: 'codex', path: '.codex/skills' }
 ];
 
+interface DetectedSkill {
+  name: string;
+  agent: string;
+  sourcePath: string;
+}
+
 /**
- * Scan user home directories for shared skills and add to registry.
+ * Detect skills in user home directories that are not registered.
+ * Returns list of unregistered skills for user to review.
  */
-async function scanUserHomeSkills(registryStore: RegistryStore): Promise<void> {
+async function detectUnregisteredHomeSkills(registryStore: RegistryStore): Promise<DetectedSkill[]> {
   const homeDir = os.homedir();
   const registry = await registryStore.loadOrCreateRegistry();
-  let updated = false;
+  const unregistered: DetectedSkill[] = [];
 
   for (const { agent, path: skillDir } of USER_HOME_SKILL_DIRS) {
     const fullPath = path.join(homeDir, skillDir);
@@ -58,23 +65,15 @@ async function scanUserHomeSkills(registryStore: RegistryStore): Promise<void> {
         try {
           await fs.access(skillPath);
           
-          // Check if skill already exists
-          const existingSkill = registry.skills.find(s => 
-            s.name === entry.name && s.scope === 'shared'
-          );
+          // Check if skill already exists in registry
+          const existingSkill = registry.skills.find(s => s.name === entry.name);
           
           if (!existingSkill) {
-            // Add new shared skill
-            registry.skills.push({
+            unregistered.push({
               name: entry.name,
-              scope: 'shared',
-              path: skillPath,
-              registryPath: path.join(homeDir, '.skillfiles'),
-              category: agent,
-              targets: []
+              agent,
+              sourcePath: skillPath
             });
-            updated = true;
-            console.log(`[Skillfiles] Found shared skill: ${entry.name} (${agent})`);
           }
         } catch {
           // SKILL.md doesn't exist, skip
@@ -85,9 +84,43 @@ async function scanUserHomeSkills(registryStore: RegistryStore): Promise<void> {
     }
   }
 
-  if (updated) {
-    await registryStore.saveRegistry(registry);
-    console.log('[Skillfiles] Updated registry with shared skills from home directories');
+  return unregistered;
+}
+
+/**
+ * Prompt user to collect detected skills from home directories.
+ */
+async function promptCollectHomeSkills(
+  unregistered: DetectedSkill[],
+  collectService: { collect: (opts: { skillName: string; sourcePath: string; registryRoot: string }) => Promise<unknown> },
+  registryRoot: string,
+  onComplete: () => void
+): Promise<void> {
+  if (unregistered.length === 0) return;
+
+  const skillList = unregistered.map(s => `${s.name} (${s.agent})`).join(', ');
+  const action = await vscode.window.showInformationMessage(
+    `Found ${unregistered.length} skill(s) in home directories: ${skillList}`,
+    'Collect All',
+    'Ignore'
+  );
+
+  if (action === 'Collect All') {
+    let collected = 0;
+    for (const skill of unregistered) {
+      try {
+        await collectService.collect({
+          skillName: skill.name,
+          sourcePath: skill.sourcePath,
+          registryRoot
+        });
+        collected++;
+      } catch (error) {
+        console.warn(`[Skillfiles] Failed to collect ${skill.name}:`, error);
+      }
+    }
+    vscode.window.showInformationMessage(`Collected ${collected} skill(s) to registry.`);
+    onComplete();
   }
 }
 
@@ -156,11 +189,6 @@ export function activate(context: vscode.ExtensionContext) {
     const templateEngine = new TemplateEngine();
     const diffEngine = new DiffEngine();
     const _repoScanner = new RepoScanner(scanRoots);
-
-    // 4.5. Scan user home for shared skills
-    void scanUserHomeSkills(registryStore).catch(err => {
-      console.warn('[Skillfiles] Failed to scan user home skills:', err);
-    });
 
     // 5. Initialize services
     const pushService = new PushService(historyManager, auditLog, templateEngine);
@@ -235,6 +263,19 @@ export function activate(context: vscode.ExtensionContext) {
     
     // Update context for Welcome Views (fire-and-forget)
     void updateViewContexts(registryStore, historyManager);
+
+    // 11. Detect and offer to collect skills from home directories
+    void detectUnregisteredHomeSkills(registryStore).then(unregistered => {
+      if (unregistered.length > 0) {
+        void promptCollectHomeSkills(unregistered, collectService, registryPath, () => {
+          skillsView.refresh();
+          repoStatusView.refresh();
+          variablesView.refresh();
+        });
+      }
+    }).catch(err => {
+      console.warn('[Skillfiles] Failed to detect home skills:', err);
+    });
 
     console.log('[Skillfiles] Extension initialization complete');
   } catch (error) {
