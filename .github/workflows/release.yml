@@ -86,11 +86,11 @@ jobs:
           jq --arg v "${{ steps.version.outputs.version }}" '.version = $v' package.json > tmp.json
           mv tmp.json package.json
 
-      - name: Run Tests
-        run: pnpm test:unit
-
       - name: Compile
         run: pnpm compile
+
+      - name: Run Tests
+        run: pnpm test:unit
 
       - name: Commit & Push
         run: |
