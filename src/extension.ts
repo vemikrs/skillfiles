@@ -1,4 +1,7 @@
 import * as vscode from 'vscode';
+import * as os from 'os';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 
 // Core modules
 import { RegistryStore } from './core/registry-store.js';
@@ -23,6 +26,70 @@ import { VariablesViewProvider } from './views/variables-view-provider.js';
 
 // Commands
 import { registerCommands } from './commands/index.js';
+
+/**
+ * Known user home skill directories.
+ */
+const USER_HOME_SKILL_DIRS = [
+  { agent: 'gemini', path: '.gemini/skills' },
+  { agent: 'claude', path: '.claude/skills' },
+  { agent: 'copilot', path: '.github/skills' },
+  { agent: 'codex', path: '.codex/skills' }
+];
+
+/**
+ * Scan user home directories for shared skills and add to registry.
+ */
+async function scanUserHomeSkills(registryStore: RegistryStore): Promise<void> {
+  const homeDir = os.homedir();
+  const registry = await registryStore.loadOrCreateRegistry();
+  let updated = false;
+
+  for (const { agent, path: skillDir } of USER_HOME_SKILL_DIRS) {
+    const fullPath = path.join(homeDir, skillDir);
+    
+    try {
+      const entries = await fs.readdir(fullPath, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        
+        const skillPath = path.join(fullPath, entry.name, 'SKILL.md');
+        try {
+          await fs.access(skillPath);
+          
+          // Check if skill already exists
+          const existingSkill = registry.skills.find(s => 
+            s.name === entry.name && s.scope === 'shared'
+          );
+          
+          if (!existingSkill) {
+            // Add new shared skill
+            registry.skills.push({
+              name: entry.name,
+              scope: 'shared',
+              path: skillPath,
+              registryPath: path.join(homeDir, '.skillfiles'),
+              category: agent,
+              targets: []
+            });
+            updated = true;
+            console.log(`[Skillfiles] Found shared skill: ${entry.name} (${agent})`);
+          }
+        } catch {
+          // SKILL.md doesn't exist, skip
+        }
+      }
+    } catch {
+      // Directory doesn't exist, skip
+    }
+  }
+
+  if (updated) {
+    await registryStore.saveRegistry(registry);
+    console.log('[Skillfiles] Updated registry with shared skills from home directories');
+  }
+}
 
 /**
  * Update VS Code context variables for Welcome View visibility.
@@ -89,6 +156,11 @@ export function activate(context: vscode.ExtensionContext) {
     const templateEngine = new TemplateEngine();
     const diffEngine = new DiffEngine();
     const _repoScanner = new RepoScanner(scanRoots);
+
+    // 4.5. Scan user home for shared skills
+    void scanUserHomeSkills(registryStore).catch(err => {
+      console.warn('[Skillfiles] Failed to scan user home skills:', err);
+    });
 
     // 5. Initialize services
     const pushService = new PushService(historyManager, auditLog, templateEngine);
