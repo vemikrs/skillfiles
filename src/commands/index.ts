@@ -744,6 +744,12 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
               }
             }
 
+            // Save all scanned repos to registry (for Variables view)
+            const scanRegistry = await deps.registryStore.loadRegistry();
+            scanRegistry.scannedRepos = repos.map(r => r.path);
+            await deps.registryStore.saveRegistry(scanRegistry);
+            deps.variablesView.refresh();
+
             if (discoveredSkills.length === 0) {
               vscode.window.showInformationMessage(
                 `Scanned ${repos.length} repositories. No skill files found.`

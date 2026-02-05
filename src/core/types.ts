@@ -77,6 +77,9 @@ export interface Registry {
   skills: Skill[];
   targets?: Target[];
   
+  // Scanned repositories (from scan roots)
+  scannedRepos?: string[];
+  
   // Hierarchical variables (priority: Target > Skill > Category > Agent > Repo > Global)
   globalVars?: Record<string, string>;
   repoVars?: Record<string, Record<string, string>>;    // key: repoPath

@@ -352,6 +352,7 @@ export class VariablesViewProvider implements vscode.TreeDataProvider<VariablesT
   private getRepoKeys(): { key: string; fullPath: string }[] {
     const repos = new Map<string, string>();
     
+    // From repoVars
     if (this.registry?.repoVars) {
       for (const repoPath of Object.keys(this.registry.repoVars)) {
         const key = repoPath.split('/').pop() || repoPath;
@@ -359,10 +360,21 @@ export class VariablesViewProvider implements vscode.TreeDataProvider<VariablesT
       }
     }
     
+    // From targets
     for (const target of this.registry?.targets || []) {
       const key = target.repoPath.split('/').pop() || target.repoPath;
       if (!repos.has(key)) {
         repos.set(key, target.repoPath);
+      }
+    }
+    
+    // From scan roots (scanned repos without skills)
+    if (this.registry?.scannedRepos) {
+      for (const repoPath of this.registry.scannedRepos) {
+        const key = repoPath.split('/').pop() || repoPath;
+        if (!repos.has(key)) {
+          repos.set(key, repoPath);
+        }
       }
     }
     
