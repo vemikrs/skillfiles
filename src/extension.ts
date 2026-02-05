@@ -92,7 +92,7 @@ async function detectUnregisteredHomeSkills(registryStore: RegistryStore): Promi
  */
 async function promptCollectHomeSkills(
   unregistered: DetectedSkill[],
-  collectService: { collect: (opts: { skillName: string; sourcePath: string; registryRoot: string }) => Promise<unknown> },
+  collectService: { collect: (opts: { skillName: string; sourceFolderPath: string; registryRoot: string }) => Promise<unknown> },
   registryRoot: string,
   onComplete: () => void
 ): Promise<void> {
@@ -111,7 +111,7 @@ async function promptCollectHomeSkills(
       try {
         await collectService.collect({
           skillName: skill.name,
-          sourcePath: skill.sourcePath,
+          sourceFolderPath: skill.sourcePath,
           registryRoot
         });
         collected++;
