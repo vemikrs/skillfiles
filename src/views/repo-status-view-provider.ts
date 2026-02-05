@@ -307,9 +307,9 @@ export class RepoStatusViewProvider implements vscode.TreeDataProvider<DeploySta
 
     // Read skill template from registry
     let templateContent = skill.template || '';
-    if (skill.path) {
+    if (skill.folderPath) {
       try {
-        templateContent = await fs.readFile(skill.path, 'utf-8');
+        templateContent = await fs.readFile(path.join(skill.folderPath, 'SKILL.md'), 'utf-8');
       } catch {
         return {
           skillName: skill.name,
@@ -367,9 +367,9 @@ export class RepoStatusViewProvider implements vscode.TreeDataProvider<DeploySta
 
     // Read skill template from file
     let templateContent = skill.template || '';
-    if (skill.path) {
+    if (skill.folderPath) {
       try {
-        templateContent = await fs.readFile(skill.path, 'utf-8');
+        templateContent = await fs.readFile(path.join(skill.folderPath, 'SKILL.md'), 'utf-8');
       } catch {
         return 'missing';
       }

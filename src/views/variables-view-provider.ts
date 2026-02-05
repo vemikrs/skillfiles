@@ -280,11 +280,12 @@ export class VariablesViewProvider implements vscode.TreeDataProvider<VariablesT
     this.allVarNames.clear();
     const BUILTIN_VARS = ['AGENT', 'VENDOR', 'SCOPE'];
     const varPattern = /\{\{([A-Z_][A-Z0-9_]*)\}\}/g;
+    const path = await import('path');
 
     for (const skill of this.registry?.skills || []) {
-      if (!skill.path) continue;
+      if (!skill.folderPath) continue;
       try {
-        const template = await fs.readFile(skill.path, 'utf-8');
+        const template = await fs.readFile(path.join(skill.folderPath, 'SKILL.md'), 'utf-8');
         let match;
         while ((match = varPattern.exec(template)) !== null) {
           if (!BUILTIN_VARS.includes(match[1])) {
