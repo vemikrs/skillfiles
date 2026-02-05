@@ -1087,14 +1087,34 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
 
           // Different flow for Shared vs Repo skills
           if (item.skill.scope === 'shared') {
-            // Shared skills: deploy to shared locations
-            const sharedLocations = [
-              { label: 'User Agent Skills', description: '~/.agent/skills/', path: path.join(os.homedir(), '.agent', 'skills') },
-              { label: 'User Skillfiles', description: '~/.skillfiles/skills/', path: path.join(os.homedir(), '.skillfiles', 'skills') }
-            ];
+            // Shared skills: deploy to user's home agent directories
+            // Generate options from agent profiles
+            const sharedLocations = Object.entries(agentProfiles).map(([agentName, profile]) => {
+              // Extract folder name from skillFolderPath (e.g., ".agent/skills" -> ".agent")
+              const folderBase = profile.skillFolderPath.split('/')[0] || `.${agentName}`;
+              const deployFolder = path.join(os.homedir(), folderBase, 'skills');
+              return {
+                label: agentName,
+                description: `~/${folderBase}/skills/`,
+                detail: `${profile.vendor}`,
+                path: deployFolder,
+                agent: agentName,
+                profile,
+                picked: agentName === 'agent'
+              };
+            });
+
+            // Sort: agent first, then gemini, then alphabetically
+            sharedLocations.sort((a, b) => {
+              if (a.agent === 'agent') return -1;
+              if (b.agent === 'agent') return 1;
+              if (a.agent === 'gemini') return -1;
+              if (b.agent === 'gemini') return 1;
+              return a.label.localeCompare(b.label);
+            });
 
             const selectedLocation = await vscode.window.showQuickPick(sharedLocations, {
-              placeHolder: 'Select shared deployment location',
+              placeHolder: 'Select agent home directory for deployment',
               title: `Deploy shared skill: ${item.skill.name}`
             });
 
@@ -1102,34 +1122,10 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
               return;
             }
 
-            // Select agent for shared deployment
-            const agentItems = Object.entries(agentProfiles).map(([name, profile]) => ({
-              label: name,
-              description: profile.vendor,
-              agent: name,
-              profile,
-              picked: name === 'agent'
-            }));
-
-            agentItems.sort((a, b) => {
-              if (a.agent === 'agent') return -1;
-              if (b.agent === 'agent') return 1;
-              return a.label.localeCompare(b.label);
-            });
-
-            const selectedAgent = await vscode.window.showQuickPick(agentItems, {
-              placeHolder: 'Select AI agent',
-              title: 'Which agent format to use?'
-            });
-
-            if (!selectedAgent) {
-              return;
-            }
-
             const deployPath = path.join(
               selectedLocation.path,
               item.skill.name,
-              selectedAgent.profile.skillFileName
+              selectedLocation.profile.skillFileName
             );
 
             // Create target for shared skill
@@ -1137,7 +1133,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
               skillName: item.skill.name,
               repoPath: selectedLocation.path,  // Use shared path as "repo path"
               scanPath: selectedLocation.path,
-              agent: selectedAgent.agent,
+              agent: selectedLocation.agent,
               deployPath
             };
 
@@ -1174,7 +1170,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
                 skillFolderPath: item.skill.folderPath,
                 deployFolderPath: path.dirname(deployPath),
                 vars: {},
-                context: { agent: selectedAgent.agent, scope: item.skill.scope }
+                context: { agent: selectedLocation.agent, scope: item.skill.scope }
               });
               vscode.window.showInformationMessage(`Pushed ${item.skill.name} to ${selectedLocation.label}.`);
               deps.repoStatusView.refresh();
