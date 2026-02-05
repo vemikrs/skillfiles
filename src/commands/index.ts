@@ -321,7 +321,10 @@ export function registerCommands(
         try {
           const skillPath = item.skill.folderPath;
           if (skillPath) {
-            const doc = await vscode.workspace.openTextDocument(skillPath);
+            // folderPath is the skill folder, open SKILL.md inside it
+            const path = await import('path');
+            const skillMdPath = path.join(skillPath, 'SKILL.md');
+            const doc = await vscode.workspace.openTextDocument(skillMdPath);
             await vscode.window.showTextDocument(doc);
           }
         } catch (error) {
