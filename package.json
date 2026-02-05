@@ -154,6 +154,66 @@
         "title": "Copy Target Path",
         "category": "Skillfiles",
         "icon": "$(clippy)"
+      },
+      {
+        "command": "skillfiles.openTarget",
+        "title": "Open Target File",
+        "category": "Skillfiles",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "skillfiles.pushAllInRepo",
+        "title": "Push All Skills in Repository",
+        "category": "Skillfiles",
+        "icon": "$(repo-push)"
+      },
+      {
+        "command": "skillfiles.collectAllInRepo",
+        "title": "Collect All Skills in Repository",
+        "category": "Skillfiles",
+        "icon": "$(repo-pull)"
+      },
+      {
+        "command": "skillfiles.clearHistory",
+        "title": "Clear History",
+        "category": "Skillfiles",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "skillfiles.showSnapshotDiff",
+        "title": "Show Snapshot Diff",
+        "category": "Skillfiles",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "skillfiles.addTarget",
+        "title": "Add Target Repository",
+        "category": "Skillfiles",
+        "icon": "$(add)"
+      },
+      {
+        "command": "skillfiles.removeTarget",
+        "title": "Remove Target",
+        "category": "Skillfiles",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "skillfiles.editVariable",
+        "title": "Edit Variable",
+        "category": "Skillfiles",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "skillfiles.refreshVariables",
+        "title": "Refresh Variables",
+        "category": "Skillfiles",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "skillfiles.editDefaultVariable",
+        "title": "Edit Default Variable",
+        "category": "Skillfiles",
+        "icon": "$(edit)"
       }
     ],
     "viewsContainers": {
@@ -176,6 +236,11 @@
           "id": "skillfiles.repoStatusView",
           "name": "Repo Status",
           "icon": "$(repo)"
+        },
+        {
+          "id": "skillfiles.variablesView",
+          "name": "Variables",
+          "icon": "$(symbol-variable)"
         },
         {
           "id": "skillfiles.historyView",
@@ -214,19 +279,69 @@
           "group": "navigation"
         },
         {
+          "command": "skillfiles.discoverSkills",
+          "when": "view == skillfiles.skillsView",
+          "group": "navigation"
+        },
+        {
+          "command": "skillfiles.bulkPush",
+          "when": "view == skillfiles.skillsView",
+          "group": "2_actions"
+        },
+        {
+          "command": "skillfiles.openAuditLog",
+          "when": "view == skillfiles.skillsView",
+          "group": "3_tools"
+        },
+        {
           "command": "skillfiles.refreshRepoStatus",
           "when": "view == skillfiles.repoStatusView",
+          "group": "navigation"
+        },
+        {
+          "command": "skillfiles.discoverSkills",
+          "when": "view == skillfiles.repoStatusView",
+          "group": "navigation"
+        },
+        {
+          "command": "skillfiles.bulkPush",
+          "when": "view == skillfiles.repoStatusView",
+          "group": "2_actions"
+        },
+        {
+          "command": "skillfiles.bulkCollect",
+          "when": "view == skillfiles.repoStatusView",
+          "group": "2_actions"
+        },
+        {
+          "command": "skillfiles.setupScanRoots",
+          "when": "view == skillfiles.repoStatusView",
+          "group": "3_tools"
+        },
+        {
+          "command": "skillfiles.refreshVariables",
+          "when": "view == skillfiles.variablesView",
           "group": "navigation"
         },
         {
           "command": "skillfiles.refreshHistory",
           "when": "view == skillfiles.historyView",
           "group": "navigation"
+        },
+        {
+          "command": "skillfiles.clearHistory",
+          "when": "view == skillfiles.historyView",
+          "group": "2_actions"
         }
       ],
       "view/item/context": [
         {
           "command": "skillfiles.openSkill",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "1_open"
+        },
+        {
+          "command": "skillfiles.pushSkill",
           "when": "view == skillfiles.skillsView && viewItem == skill",
           "group": "1_open"
         },
@@ -239,6 +354,26 @@
           "command": "skillfiles.deleteSkill",
           "when": "view == skillfiles.skillsView && viewItem == skill",
           "group": "3_delete"
+        },
+        {
+          "command": "skillfiles.addTarget",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "2_copy"
+        },
+        {
+          "command": "skillfiles.pushSkill",
+          "when": "view == skillfiles.skillsView && viewItem == skill",
+          "group": "inline"
+        },
+        {
+          "command": "skillfiles.pushAllInRepo",
+          "when": "view == skillfiles.repoStatusView && viewItem == repo",
+          "group": "1_sync"
+        },
+        {
+          "command": "skillfiles.collectAllInRepo",
+          "when": "view == skillfiles.repoStatusView && viewItem == repo",
+          "group": "1_sync"
         },
         {
           "command": "skillfiles.pushSkill",
@@ -256,9 +391,29 @@
           "group": "2_view"
         },
         {
+          "command": "skillfiles.openTarget",
+          "when": "view == skillfiles.repoStatusView && viewItem =~ /^target/",
+          "group": "2_view"
+        },
+        {
           "command": "skillfiles.copyTargetPath",
           "when": "view == skillfiles.repoStatusView && viewItem =~ /^target/",
           "group": "3_copy"
+        },
+        {
+          "command": "skillfiles.removeTarget",
+          "when": "view == skillfiles.repoStatusView && viewItem =~ /^target/",
+          "group": "4_delete"
+        },
+        {
+          "command": "skillfiles.pushSkill",
+          "when": "view == skillfiles.repoStatusView && viewItem =~ /^target/",
+          "group": "inline"
+        },
+        {
+          "command": "skillfiles.collectSkill",
+          "when": "view == skillfiles.repoStatusView && viewItem =~ /^target/",
+          "group": "inline"
         },
         {
           "command": "skillfiles.rollbackSkill",
@@ -269,6 +424,16 @@
           "command": "skillfiles.previewSnapshot",
           "when": "view == skillfiles.historyView && viewItem == snapshot",
           "group": "2_view"
+        },
+        {
+          "command": "skillfiles.showSnapshotDiff",
+          "when": "view == skillfiles.historyView && viewItem == snapshot",
+          "group": "2_view"
+        },
+        {
+          "command": "skillfiles.rollbackSkill",
+          "when": "view == skillfiles.historyView && viewItem == snapshot",
+          "group": "inline"
         }
       ]
     },
