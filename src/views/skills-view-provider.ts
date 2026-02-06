@@ -1,9 +1,24 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { Skill, Registry, SkillMetadata } from '../core/types.js';
+import * as os from 'os';
+import type { Skill, Registry, SkillMetadata, Target, TargetStatus, TargetWithStatus } from '../core/types.js';
 import type { RegistryStore } from '../core/registry-store.js';
+import type { DiffEngine } from '../core/diff-engine.js';
+import type { TemplateEngine } from '../core/template-engine.js';
 import { parseSkillFolder } from '../core/skill-parser.js';
+import { computeHash } from '../utils/hash.js';
+
+/**
+ * Known user home skill directories.
+ */
+const USER_HOME_SKILL_DIRS = [
+  { agent: 'agent', path: '.agent/skills' },
+  { agent: 'gemini', path: '.gemini/skills' },
+  { agent: 'claude', path: '.claude/skills' },
+  { agent: 'copilot', path: '.github/skills' },
+  { agent: 'codex', path: '.codex/skills' }
+];
 
 /**
  * Tree item for skill entries.
@@ -106,7 +121,85 @@ export class ResourceTreeItem extends vscode.TreeItem {
   }
 }
 
-type SkillsTreeElement = SkillTreeItem | CategoryTreeItem | ResourceTreeItem;
+/**
+ * Tree item for Targets section under a skill.
+ */
+export class TargetsSectionTreeItem extends vscode.TreeItem {
+  constructor(
+    public readonly skill: Skill,
+    public readonly targets: TargetWithStatus[],
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState
+  ) {
+    super('Targets', collapsibleState);
+    this.contextValue = 'targetsSection';
+    this.iconPath = new vscode.ThemeIcon('target');
+    
+    // Show count and sync status summary
+    const synced = targets.filter(t => t.status === 'synced').length;
+    if (targets.length === 0) {
+      this.description = 'No targets';
+    } else if (synced === targets.length) {
+      this.description = `${targets.length} target${targets.length !== 1 ? 's' : ''} ✓`;
+    } else {
+      this.description = `${synced}/${targets.length} synced`;
+    }
+  }
+}
+
+/**
+ * Tree item for Contents section under a skill.
+ */
+export class ContentsSectionTreeItem extends vscode.TreeItem {
+  constructor(
+    public readonly skill: Skill,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState
+  ) {
+    super('Contents', collapsibleState);
+    this.contextValue = 'contentsSection';
+    this.iconPath = new vscode.ThemeIcon('package');
+    this.tooltip = 'Skill folder contents (SKILL.md, scripts, references, etc.)';
+  }
+}
+
+/**
+ * Tree item for individual deployment target under Targets section.
+ */
+export class SkillTargetTreeItem extends vscode.TreeItem {
+  constructor(
+    public readonly skill: Skill,
+    public readonly target: TargetWithStatus,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState
+  ) {
+    // Display: repoName / agent
+    const repoName = target.repoPath.split('/').pop() || target.repoPath;
+    super(`${repoName} / ${target.agent}`, collapsibleState);
+    
+    this.contextValue = `skillTarget-${target.status}`;
+    this.tooltip = new vscode.MarkdownString(
+      `**${target.skillName}**\n\nRepo: ${target.repoPath}\nAgent: ${target.agent}\nStatus: ${target.status}`
+    );
+    
+    // Icon based on status
+    const iconMap: Record<TargetStatus, string> = {
+      'synced': 'check',
+      'modified': 'diff',
+      'missing': 'warning',
+      'needs-vars': 'variable'
+    };
+    this.iconPath = new vscode.ThemeIcon(iconMap[target.status]);
+    
+    // Description shows status if not synced
+    if (target.status === 'synced') {
+      this.description = '';
+    } else if (target.status === 'needs-vars' && target.missingVars?.length) {
+      this.description = `Missing: ${target.missingVars.join(', ')}`;
+    } else {
+      this.description = target.status;
+    }
+  }
+}
+
+type SkillsTreeElement = SkillTreeItem | CategoryTreeItem | ResourceTreeItem | TargetsSectionTreeItem | ContentsSectionTreeItem | SkillTargetTreeItem;
 
 /**
  * TreeDataProvider for the Skills view.
@@ -116,14 +209,18 @@ export class SkillsViewProvider implements vscode.TreeDataProvider<SkillsTreeEle
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private registry: Registry | null = null;
+  private targetStatusCache = new Map<string, TargetWithStatus>();
 
   constructor(
     private readonly registryStore: RegistryStore,
+    private readonly diffEngine?: DiffEngine,
+    private readonly templateEngine?: TemplateEngine,
     private readonly groupByCategory: boolean = true
   ) {}
 
   refresh(): void {
     this.registry = null;
+    this.targetStatusCache.clear();
     this._onDidChangeTreeData.fire();
   }
 
@@ -178,7 +275,34 @@ export class SkillsViewProvider implements vscode.TreeDataProvider<SkillsTreeEle
     }
 
     if (element instanceof SkillTreeItem) {
-      // Skill children: folder contents
+      // Skill children: Targets section + Contents section
+      const targets = await this.getSkillTargetsWithStatus(element.skill);
+      return [
+        new TargetsSectionTreeItem(
+          element.skill,
+          targets,
+          vscode.TreeItemCollapsibleState.Collapsed
+        ),
+        new ContentsSectionTreeItem(
+          element.skill,
+          vscode.TreeItemCollapsibleState.Collapsed
+        )
+      ];
+    }
+
+    if (element instanceof TargetsSectionTreeItem) {
+      // Targets section children: individual targets
+      return element.targets.map(
+        target => new SkillTargetTreeItem(
+          element.skill,
+          target,
+          vscode.TreeItemCollapsibleState.None
+        )
+      );
+    }
+
+    if (element instanceof ContentsSectionTreeItem) {
+      // Contents section children: folder contents
       return this.getSkillResources(element.skill);
     }
 
@@ -205,6 +329,151 @@ export class SkillsViewProvider implements vscode.TreeDataProvider<SkillsTreeEle
     }
     
     return new SkillTreeItem(skill, vscode.TreeItemCollapsibleState.Collapsed, metadata);
+  }
+
+  /**
+   * Get all targets for a skill with computed status.
+   */
+  private async getSkillTargetsWithStatus(skill: Skill): Promise<TargetWithStatus[]> {
+    const targets: TargetWithStatus[] = [];
+    
+    // Get targets from skill.targets (repo targets)
+    for (const target of skill.targets || []) {
+      const status = await this.computeTargetStatus(skill, target);
+      targets.push({
+        ...target,
+        status,
+        skillName: skill.name
+      });
+    }
+    
+    // For shared skills, also check user home directories
+    if (skill.scope === 'shared') {
+      const homeTargets = await this.detectHomeDirectoryTargets(skill);
+      targets.push(...homeTargets);
+    }
+    
+    return targets;
+  }
+
+  /**
+   * Detect deployed targets in user home directories for shared skills.
+   */
+  private async detectHomeDirectoryTargets(skill: Skill): Promise<TargetWithStatus[]> {
+    const homeDir = os.homedir();
+    const targets: TargetWithStatus[] = [];
+
+    for (const { agent, path: skillDir } of USER_HOME_SKILL_DIRS) {
+      const deployPath = path.join(homeDir, skillDir, skill.name, 'SKILL.md');
+      
+      try {
+        await fs.access(deployPath);
+        
+        // File exists, compute status
+        const status = await this.computeHomeTargetStatus(skill, deployPath);
+        targets.push({
+          skillName: skill.name,
+          agent,
+          repoPath: homeDir,
+          scanPath: homeDir,
+          deployPath,
+          status
+        });
+      } catch {
+        // File doesn't exist, skip
+      }
+    }
+
+    return targets;
+  }
+
+  /**
+   * Compute status for a home directory target.
+   */
+  private async computeHomeTargetStatus(skill: Skill, deployPath: string): Promise<TargetStatus> {
+    // Read skill template from registry
+    let templateContent = skill.template || '';
+    if (skill.folderPath) {
+      try {
+        templateContent = await fs.readFile(path.join(skill.folderPath, 'SKILL.md'), 'utf-8');
+      } catch {
+        return 'missing';
+      }
+    }
+
+    try {
+      const deployedContent = await fs.readFile(deployPath, 'utf-8');
+      const deployedHash = computeHash(deployedContent);
+      const registryHash = computeHash(templateContent);
+      
+      if (this.diffEngine) {
+        return this.diffEngine.computeStatus({
+          registryHash,
+          repoHash: deployedHash,
+          repoFileExists: true,
+          needsVars: false
+        });
+      }
+      
+      return registryHash === deployedHash ? 'synced' : 'modified';
+    } catch {
+      return 'missing';
+    }
+  }
+
+  /**
+   * Compute status for a single target.
+   */
+  private async computeTargetStatus(skill: Skill, target: Target): Promise<TargetStatus> {
+    // If no deploy path, it's missing
+    if (!target.deployPath) {
+      return 'missing';
+    }
+
+    // Read skill template from file
+    let templateContent = skill.template || '';
+    if (skill.folderPath) {
+      try {
+        templateContent = await fs.readFile(path.join(skill.folderPath, 'SKILL.md'), 'utf-8');
+      } catch {
+        return 'missing';
+      }
+    }
+
+    // If no engines provided, skip status computation
+    if (!this.diffEngine || !this.templateEngine || !this.registry) {
+      return 'synced'; // Assume synced if we can't compute
+    }
+
+    // Resolve vars using hierarchical system
+    const resolvedVars = this.templateEngine.resolveVars(target, skill, this.registry);
+
+    // Check if template needs vars
+    if (this.templateEngine.needsVars(templateContent, resolvedVars)) {
+      return 'needs-vars';
+    }
+
+    try {
+      const deployedContent = await fs.readFile(target.deployPath, 'utf-8');
+      const deployedHash = computeHash(deployedContent);
+      
+      // Compare with registry hash (expanded template)
+      const registryContent = this.templateEngine.expand(
+        templateContent,
+        resolvedVars,
+        { agent: target.agent, scope: skill.scope }
+      );
+      const registryHash = computeHash(registryContent);
+      
+      return this.diffEngine.computeStatus({
+        registryHash,
+        repoHash: deployedHash,
+        repoFileExists: true,
+        needsVars: false
+      });
+    } catch {
+      return 'missing';
+    }
   }
 
   /**

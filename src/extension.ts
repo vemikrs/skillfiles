@@ -216,7 +216,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // 6. Initialize view providers
     console.log('[Skillfiles] Initializing view providers...');
-    const skillsView = new SkillsViewProvider(registryStore);
+    const skillsView = new SkillsViewProvider(registryStore, diffEngine, templateEngine);
     const repoStatusView = new RepoStatusViewProvider(
       registryStore,
       diffEngine,
