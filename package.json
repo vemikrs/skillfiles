@@ -2,7 +2,7 @@
   "name": "skillfiles",
   "displayName": "Skillfiles",
   "description": "Centrally manage AI agent skill definitions across repositories",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "ve",
   "license": "MIT",
   "packageManager": "pnpm@10.28.2",
@@ -643,55 +643,78 @@
           "default": {
             "agent": {
               "vendor": "agentskills.io",
-              "instructionPaths": ["AGENTS.md"],
+              "instructionPaths": [
+                "AGENTS.md"
+              ],
               "skillFolderPath": ".agent/skills",
               "skillFileName": "SKILL.md"
             },
             "gemini": {
               "vendor": "google",
-              "instructionPaths": ["GEMINI.md", ".gemini/styleguide.md"],
+              "instructionPaths": [
+                "GEMINI.md",
+                ".gemini/styleguide.md"
+              ],
               "skillFolderPath": ".gemini/skills",
               "skillFileName": "SKILL.md"
             },
             "copilot": {
               "vendor": "github",
-              "instructionPaths": [".github/copilot-instructions.md", "AGENTS.md"],
+              "instructionPaths": [
+                ".github/copilot-instructions.md",
+                "AGENTS.md"
+              ],
               "skillFolderPath": ".github/skills",
               "skillFileName": "SKILL.md"
             },
             "claude": {
               "vendor": "anthropic",
-              "instructionPaths": ["CLAUDE.md"],
+              "instructionPaths": [
+                "CLAUDE.md"
+              ],
               "skillFolderPath": ".claude/skills",
               "skillFileName": "SKILL.md"
             },
             "codex": {
               "vendor": "openai",
-              "instructionPaths": ["AGENTS.md"],
+              "instructionPaths": [
+                "AGENTS.md"
+              ],
               "skillFolderPath": ".codex/skills",
               "skillFileName": "SKILL.md"
             },
             "cursor": {
               "vendor": "anysphere",
-              "instructionPaths": [".cursorrules", ".cursor/rules"],
+              "instructionPaths": [
+                ".cursorrules",
+                ".cursor/rules"
+              ],
               "skillFolderPath": ".cursor/skills",
               "skillFileName": "SKILL.md"
             },
             "windsurf": {
               "vendor": "codeium",
-              "instructionPaths": [".windsurfrules", ".windsurf/rules"],
+              "instructionPaths": [
+                ".windsurfrules",
+                ".windsurf/rules"
+              ],
               "skillFolderPath": ".windsurf/skills",
               "skillFileName": "SKILL.md"
             },
             "cody": {
               "vendor": "sourcegraph",
-              "instructionPaths": [".cody/instructions.md"],
+              "instructionPaths": [
+                ".cody/instructions.md"
+              ],
               "skillFolderPath": ".cody/skills",
               "skillFileName": "SKILL.md"
             },
             "aider": {
               "vendor": "aider",
-              "instructionPaths": ["CONVENTIONS.md", "AGENTS.md"],
+              "instructionPaths": [
+                "CONVENTIONS.md",
+                "AGENTS.md"
+              ],
               "skillFolderPath": ".aider/skills",
               "skillFileName": "SKILL.md"
             },
@@ -712,7 +735,9 @@
               },
               "instructionPaths": {
                 "type": "array",
-                "items": { "type": "string" },
+                "items": {
+                  "type": "string"
+                },
                 "description": "Instruction file paths (not managed by Skillfiles)"
               },
               "skillFolderPath": {
