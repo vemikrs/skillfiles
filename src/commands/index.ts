@@ -1317,10 +1317,16 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
 
             const registry = await deps.registryStore.loadRegistry();
             
-            // Check if target already exists
-            const existingTarget = registry.targets?.find(
-              t => t.skillName === newTarget.skillName && 
-                   t.repoPath === newTarget.repoPath && 
+            // Find the skill in registry to add target to skill.targets
+            const skillIdx = registry.skills.findIndex(s => s.name === item.skill.name);
+            if (skillIdx === -1) {
+              vscode.window.showErrorMessage('Skill not found in registry.');
+              return;
+            }
+
+            // Check if target already exists in skill.targets
+            const existingTarget = registry.skills[skillIdx].targets?.find(
+              t => t.repoPath === newTarget.repoPath && 
                    t.agent === newTarget.agent
             );
 
@@ -1329,8 +1335,16 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
               return;
             }
 
+            // Add to skill.targets
+            if (!registry.skills[skillIdx].targets) {
+              registry.skills[skillIdx].targets = [];
+            }
+            registry.skills[skillIdx].targets.push(newTarget);
+            
+            // Also add to registry.targets for backwards compatibility
             if (!registry.targets) registry.targets = [];
             registry.targets.push(newTarget);
+            
             await deps.registryStore.saveRegistry(registry);
 
             deps.skillsView.refresh();
@@ -1460,10 +1474,16 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           // Add to registry
           const registry = await deps.registryStore.loadRegistry();
           
-          // Check if target already exists
-          const existingTarget = registry.targets?.find(
-            t => t.skillName === newTarget.skillName && 
-                 t.repoPath === newTarget.repoPath && 
+          // Find the skill in registry to add target to skill.targets
+          const skillIdx = registry.skills.findIndex(s => s.name === item.skill.name);
+          if (skillIdx === -1) {
+            vscode.window.showErrorMessage('Skill not found in registry.');
+            return;
+          }
+          
+          // Check if target already exists in skill.targets
+          const existingTarget = registry.skills[skillIdx].targets?.find(
+            t => t.repoPath === newTarget.repoPath && 
                  t.agent === newTarget.agent
           );
 
@@ -1474,7 +1494,13 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             return;
           }
 
-          // Add target to registry
+          // Add target to skill.targets
+          if (!registry.skills[skillIdx].targets) {
+            registry.skills[skillIdx].targets = [];
+          }
+          registry.skills[skillIdx].targets.push(newTarget);
+          
+          // Also add to registry.targets for backwards compatibility
           if (!registry.targets) {
             registry.targets = [];
           }
