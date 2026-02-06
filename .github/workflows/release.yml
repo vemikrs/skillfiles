@@ -6,7 +6,10 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      - "resources/**"
+      - "l10n/**"
       - "package.json"
+      - "package.nls*.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/**"
 
