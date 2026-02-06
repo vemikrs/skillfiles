@@ -66,7 +66,47 @@ export function registerCommands(
           if ('skill' in item) {
             // SkillTreeItem: push to all targets for this skill
             const skillItem = item as SkillTreeItem;
-            const targets = registry.targets?.filter(t => t.skillName === skillItem.skill.name) || [];
+            
+            // Find the skill in registry to get fresh targets
+            const registrySkill = registry.skills.find(s => s.name === skillItem.skill.name);
+            
+            // Merge targets from both registry.targets and skill.targets
+            const registryTargets = registry.targets?.filter(t => t.skillName === skillItem.skill.name) || [];
+            const skillTargets = registrySkill?.targets || [];
+            
+            // For shared skills, also detect deployed targets in user home directories
+            const detectedTargets: typeof registryTargets = [];
+            if (skillItem.skill.scope === 'shared') {
+              const fs = await import('fs/promises');
+              const path = await import('path');
+              const os = await import('os');
+              const { getHomeSkillDirs } = await import('../core/constants.js');
+              
+              const homeDir = os.homedir();
+              for (const { agent, path: skillDir } of getHomeSkillDirs()) {
+                const deployPath = path.join(homeDir, skillDir, skillItem.skill.name, 'SKILL.md');
+                try {
+                  await fs.access(deployPath);
+                  // File exists, add as detected target
+                  detectedTargets.push({
+                    skillName: skillItem.skill.name,
+                    agent,
+                    repoPath: homeDir,
+                    scanPath: homeDir,
+                    deployPath
+                  });
+                } catch {
+                  // File doesn't exist, skip
+                }
+              }
+            }
+            
+            // Deduplicate by repoPath + agent combination
+            const targetMap = new Map<string, typeof registryTargets[number]>();
+            for (const t of [...registryTargets, ...skillTargets, ...detectedTargets]) {
+              targetMap.set(`${t.repoPath}:${t.agent}`, t);
+            }
+            const targets = Array.from(targetMap.values());
             
             if (targets.length === 0) {
               vscode.window.showWarningMessage(`No targets registered for skill: ${skillItem.skill.name}`);
@@ -79,6 +119,18 @@ export function registerCommands(
             for (const target of targets) {
               try {
                 if (!skillItem.skill.folderPath || !target.deployPath) {continue;}
+
+                // Verify skill folder exists before pushing
+                const fsCheck = await import('fs/promises');
+                try {
+                  await fsCheck.access(skillItem.skill.folderPath);
+                } catch {
+                  vscode.window.showErrorMessage(
+                    `Skill folder not found: ${skillItem.skill.folderPath}. ` +
+                    `The skill may need to be re-imported.`
+                  );
+                  return;
+                }
 
                 const path = await import('path');
                 await deps.pushService.push({
@@ -993,13 +1045,41 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
               };
               await copyDir(skill.folderPath, skillDir);
 
-              // Add to registry as shared skill
+              // Auto-detect existing deployed targets in user home directories
+              const { getHomeSkillDirs } = await import('../core/constants.js');
+              const homeDir = os.homedir();
+              const detectedTargets: Array<{
+                skillName: string;
+                repoPath: string;
+                scanPath: string;
+                agent: string;
+                deployPath: string;
+              }> = [];
+              
+              for (const { agent, path: skillDirPath } of getHomeSkillDirs()) {
+                const deployPath = path.join(homeDir, skillDirPath, skill.name, 'SKILL.md');
+                try {
+                  await fs.access(deployPath);
+                  // File exists, add as detected target
+                  detectedTargets.push({
+                    skillName: skill.name,
+                    agent,
+                    repoPath: homeDir,
+                    scanPath: homeDir,
+                    deployPath
+                  });
+                } catch {
+                  // File doesn't exist, skip
+                }
+              }
+
+              // Add to registry as shared skill with detected targets
               registry.skills.push({
                 name: skill.name,
                 scope: 'shared',
                 registryPath: `skills/${skill.name}`,
                 folderPath: skillDir,
-                targets: []
+                targets: detectedTargets
               });
 
               importCount++;
@@ -1357,6 +1437,18 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             );
 
             if (pushNow === 'Push' && item.skill.folderPath) {
+              // Verify skill folder exists before pushing
+              const fs = await import('fs/promises');
+              try {
+                await fs.access(item.skill.folderPath);
+              } catch {
+                vscode.window.showErrorMessage(
+                  `Skill folder not found: ${item.skill.folderPath}. ` +
+                  `The skill may need to be re-imported.`
+                );
+                return;
+              }
+              
               await deps.pushService.push({
                 skillName: item.skill.name,
                 skillFolderPath: item.skill.folderPath,
