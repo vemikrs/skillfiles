@@ -573,8 +573,8 @@
         },
         "skillfiles.sharedSkillRoot": {
           "type": "string",
-          "default": "~/.agents",
-          "description": "Path to shared skills root"
+          "default": "~",
+          "description": "Path to shared skills root (scans ~/.agent, ~/.gemini, etc.)"
         },
         "skillfiles.scanRoots": {
           "type": "array",
