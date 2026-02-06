@@ -1,12 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366f1"/>
-      <stop offset="100%" style="stop-color:#8b5cf6"/>
-    </linearGradient>
-  </defs>
-  <rect width="128" height="128" rx="16" fill="url(#bg)"/>
-  <text x="64" y="72" text-anchor="middle" font-family="system-ui" font-size="48" font-weight="bold" fill="white">S</text>
-  <circle cx="96" cy="32" r="12" fill="#22c55e"/>
-  <path d="M90 32 L94 36 L102 28" stroke="white" stroke-width="3" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+  <!-- Skill/Magic wand with sparkles - representing AI skill management -->
+  <!-- Main wand/pen shape -->
+  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+  <!-- Sparkle top right -->
+  <path d="M18 2l.5 1.5L20 4l-1.5.5L18 6l-.5-1.5L16 4l1.5-.5L18 2z"/>
+  <!-- Sparkle small -->
+  <path d="M10 3l.35 1.05L11.4 4.4l-1.05.35L10 5.8l-.35-1.05L8.6 4.4l1.05-.35L10 3z"/>
 </svg>
