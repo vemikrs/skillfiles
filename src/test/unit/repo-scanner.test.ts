@@ -118,16 +118,16 @@ describe('RepoScanner', () => {
 
   describe('isInsideWorkspace', () => {
     it('should return true for workspace paths', () => {
-      const scanRoots: ScanRoot[] = [{ key: 'work', path: '/Users/mi/work' }];
+      const scanRoots: ScanRoot[] = [{ key: 'work', path: '/home/user/work' }];
       const scanner = new RepoScanner(scanRoots);
       
-      const result = scanner.isInsideWorkspace('/Users/mi/work/myproject');
+      const result = scanner.isInsideWorkspace('/home/user/work/myproject');
       
       expect(result).to.be.true;
     });
 
     it('should return false for external paths', () => {
-      const scanRoots: ScanRoot[] = [{ key: 'work', path: '/Users/mi/work' }];
+      const scanRoots: ScanRoot[] = [{ key: 'work', path: '/home/user/work' }];
       const scanner = new RepoScanner(scanRoots);
       
       const result = scanner.isInsideWorkspace('/Users/other/project');

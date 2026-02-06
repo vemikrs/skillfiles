@@ -1,9 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "composite": true,
     "outDir": "out/test",
-    "rootDir": "src/test"
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
   },
   "include": ["src/test/**/*"],
   "exclude": ["node_modules"]

@@ -35,14 +35,14 @@ describe('PathUtils', () => {
 
   describe('normalizePath', () => {
     it('should convert backslashes to forward slashes', () => {
-      const input = 'C:\\Users\\mi\\projects';
+      const input = 'C:\\home\\user\\projects';
       const result = normalizePath(input);
       
-      expect(result).to.equal('C:/Users/mi/projects');
+      expect(result).to.equal('C:/home/user/projects');
     });
 
     it('should not modify paths with forward slashes', () => {
-      const input = '/Users/mi/projects';
+      const input = '/home/user/projects';
       const result = normalizePath(input);
       
       expect(result).to.equal(input);
