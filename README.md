@@ -38,11 +38,11 @@ graph TD
     History -.-> Skills
 ```
 
-| Flow        | Description                                          |
-| ----------- | ---------------------------------------------------- |
-| **Push**    | Registry → Targets: スキルをテンプレート展開して配信 |
-| **Collect** | Targets → Registry: リポジトリ側の変更を収集・同期   |
-| **Scope**   | `repo` = プロジェクト固有, `shared` = ユーザー全体   |
+| Flow        | Description                                               |
+| ----------- | --------------------------------------------------------- |
+| **Push**    | Registry → Targets: Deploy skills with template expansion |
+| **Collect** | Targets → Registry: Sync changes from repositories        |
+| **Scope**   | `repo` = project-specific, `shared` = user-wide           |
 
 ## Features
 
@@ -71,7 +71,8 @@ Deploy the same skill to different AI agents with agent-specific configurations:
 
 - GitHub Copilot (`.github/copilot-instructions.md`)
 - Anthropic Claude (`.claude/skill.md`)
-- Custom agents
+- Google Gemini (`.gemini/skills/`)
+- Custom agents (`.agent/skills/`)
 
 ### 📊 Version History
 
@@ -79,10 +80,18 @@ Automatic snapshots before every change. Roll back to any previous version with 
 
 ## Quick Start
 
-1. Open the Skillfiles sidebar (look for the icon in the Activity Bar)
-2. Create your first skill in the registry
-3. Add target repositories
-4. Push to deploy!
+1. **Install** the extension from VS Code Marketplace
+2. **Open** the Skillfiles sidebar (look for the icon in the Activity Bar)
+3. **Create** your first skill:
+   - Click "Create New Skill" button
+   - Enter a name (e.g., `code-review`)
+   - Write your skill content in the SKILL.md file
+4. **Add a target**:
+   - Right-click your skill → "Add Target"
+   - Select a repository and agent
+5. **Push** to deploy:
+   - Right-click your skill → "Push"
+   - Confirm the deployment
 
 ## Extension Settings
 
