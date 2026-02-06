@@ -1,16 +1,31 @@
 /**
- * Shared constants for Skillfiles extension
+ * Shared constants and utilities for Skillfiles extension
  */
+
+import * as vscode from 'vscode';
+
+export interface AgentProfile {
+  vendor: string;
+  instructionPaths: string[];
+  skillFolderPath: string;
+  skillFileName: string;
+}
+
+export interface HomeSkillDir {
+  agent: string;
+  path: string;
+}
 
 /**
- * Default locations to scan for shared skills in user home directory.
+ * Get home skill directories from agentProfiles configuration.
+ * This is the single source of truth for skill folder paths.
  */
-export const USER_HOME_SKILL_DIRS = [
-  { agent: 'agent', path: '.agent/skills' },
-  { agent: 'gemini', path: '.gemini/skills' },
-  { agent: 'claude', path: '.claude/skills' },
-  { agent: 'copilot', path: '.github/skills' },
-  { agent: 'codex', path: '.codex/skills' }
-] as const;
-
-export type UserHomeSkillDir = typeof USER_HOME_SKILL_DIRS[number];
+export function getHomeSkillDirs(): HomeSkillDir[] {
+  const config = vscode.workspace.getConfiguration('skillfiles');
+  const agentProfiles = config.get<Record<string, AgentProfile>>('agentProfiles') || {};
+  
+  return Object.entries(agentProfiles).map(([agentName, profile]) => ({
+    agent: agentName,
+    path: profile.skillFolderPath
+  }));
+}
