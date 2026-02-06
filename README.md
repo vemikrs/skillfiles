@@ -4,6 +4,46 @@
 
 Skillfiles lets you define agent behaviors (skill.md files) in one place and deploy them consistently to multiple repositories. Perfect for teams using GitHub Copilot, Claude, or other AI coding assistants.
 
+## Architecture Overview
+
+```mermaid
+graph TD
+    subgraph Registry["📁 Central Registry (~/.skillfiles)"]
+        Skills["🛠️ skills/"]
+        History["📜 history/"]
+        Meta["📋 registry.yaml"]
+    end
+
+    subgraph Shared["🏠 Shared Skills (~/.agents)"]
+        SharedSkills["🛠️ skills/"]
+    end
+
+    subgraph Targets["🎯 Deployment Targets"]
+        Repo1["📂 Repo A (.github/skills/)"]
+        Repo2["📂 Repo B (.claude/skills/)"]
+        Agent1["🤖 ~/.gemini/skills/"]
+        Agent2["🤖 ~/.agent/skills/"]
+    end
+
+    Skills -- "Push" --> Repo1
+    Skills -- "Push" --> Repo2
+    SharedSkills -- "Push" --> Agent1
+    SharedSkills -- "Push" --> Agent2
+
+    Repo1 -- "Collect" --> Skills
+    Repo2 -- "Collect" --> Skills
+    Agent1 -- "Collect" --> SharedSkills
+
+    Meta -.-> Skills
+    History -.-> Skills
+```
+
+| Flow        | Description                                          |
+| ----------- | ---------------------------------------------------- |
+| **Push**    | Registry → Targets: スキルをテンプレート展開して配信 |
+| **Collect** | Targets → Registry: リポジトリ側の変更を収集・同期   |
+| **Scope**   | `repo` = プロジェクト固有, `shared` = ユーザー全体   |
+
 ## Features
 
 ### 🎯 Centralized Skill Registry
