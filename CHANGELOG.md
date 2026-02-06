@@ -5,6 +5,31 @@ All notable changes to the "Skillfiles" extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-02-06
+
+### Added
+
+- **Skills View redesign**: Skills now show two sections when expanded:
+  - **Targets**: Deployment targets with sync status indicators
+  - **Contents**: Skill folder contents (SKILL.md, scripts, etc.)
+- **Home directory scanning**: Shared skills now detect deployments in `~/.gemini/skills/`, `~/.agent/skills/`, etc.
+
+### Fixed
+
+- Add Target now correctly updates both `skill.targets` and `registry.targets`
+
+## [0.1.1] - 2026-02-05
+
+### Added
+
+- **Import Shared Skills**: Scan and import skills from user home directories
+- **Shared skill support**: Deploy skills to user-wide agent directories
+- **Folder-level management**: Skills are now managed as complete folders, not just SKILL.md files
+
+### Fixed
+
+- Expand `~` to home directory in scan paths
+
 ## [0.1.0] - 2026-02-04
 
 ### Added
@@ -26,8 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Views
 
 - **Skills View**: Browse all registered skills
-- **Repo Status View**: Monitor sync status across targets
+- **Deploy Status View**: Monitor sync status across targets
 - **History View**: View and restore snapshots
+- **Variables View**: Manage template variables
 
 #### Commands
 
@@ -39,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical
 
-- VS Code 1.108+ support
-- 101 unit tests
+- VS Code 1.107+ support
+- 104 unit tests
 - TypeScript with ESM modules
 - Handlebars for template variables

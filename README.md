@@ -69,10 +69,11 @@ Owner: {{OWNER}}
 
 Deploy the same skill to different AI agents with agent-specific configurations:
 
-- GitHub Copilot (`.github/copilot-instructions.md`)
-- Anthropic Claude (`.claude/skill.md`)
+- GitHub Copilot (`.github/skills/`)
+- Anthropic Claude (`.claude/skills/`)
 - Google Gemini (`.gemini/skills/`)
-- Custom agents (`.agent/skills/`)
+- Standard Agent (`.agent/skills/`) - [agentskills.io](https://agentskills.io) standard
+- Cursor, Windsurf, Cody, and more
 
 ### 📊 Version History
 
