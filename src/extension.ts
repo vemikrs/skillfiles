@@ -12,7 +12,7 @@ import { DiffEngine } from './core/diff-engine.js';
 import { RepoScanner } from './core/repo-scanner.js';
 import { SettingsManager } from './core/settings-manager.js';
 import { Guardrails } from './core/guardrails.js';
-import { USER_HOME_SKILL_DIRS } from './core/constants.js';
+import { getHomeSkillDirs } from './core/constants.js';
 
 // Services
 import { PushService } from './services/push-service.js';
@@ -43,7 +43,7 @@ async function detectUnregisteredHomeSkills(registryStore: RegistryStore): Promi
   const registry = await registryStore.loadOrCreateRegistry();
   const unregistered: DetectedSkill[] = [];
 
-  for (const { agent, path: skillDir } of USER_HOME_SKILL_DIRS) {
+  for (const { agent, path: skillDir } of getHomeSkillDirs()) {
     const fullPath = path.join(homeDir, skillDir);
     
     try {

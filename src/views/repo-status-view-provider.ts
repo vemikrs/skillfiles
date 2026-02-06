@@ -7,17 +7,7 @@ import type { TemplateEngine } from '../core/template-engine.js';
 import { computeHash } from '../utils/hash.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-
-/**
- * Known user home skill directories.
- */
-const USER_HOME_SKILL_DIRS = [
-  { agent: 'agent', path: '.agent/skills' },
-  { agent: 'gemini', path: '.gemini/skills' },
-  { agent: 'claude', path: '.claude/skills' },
-  { agent: 'copilot', path: '.github/skills' },
-  { agent: 'codex', path: '.codex/skills' }
-];
+import { getHomeSkillDirs } from '../core/constants.js';
 
 /**
  * Tree item for User Home section.
@@ -282,7 +272,7 @@ export class RepoStatusViewProvider implements vscode.TreeDataProvider<DeploySta
 
     // For each skill, check if it's deployed to user home directories
     for (const skill of this.registry?.skills || []) {
-      for (const { agent, path: skillDir } of USER_HOME_SKILL_DIRS) {
+      for (const { agent, path: skillDir } of getHomeSkillDirs()) {
         const deployPath = path.join(homeDir, skillDir, skill.name, 'SKILL.md');
         
         const status = await this.computeHomeSkillStatus(skill, deployPath, agent);

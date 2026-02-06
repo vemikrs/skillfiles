@@ -8,7 +8,7 @@ import type { DiffEngine } from '../core/diff-engine.js';
 import type { TemplateEngine } from '../core/template-engine.js';
 import { parseSkillFolder } from '../core/skill-parser.js';
 import { computeHash } from '../utils/hash.js';
-import { USER_HOME_SKILL_DIRS } from '../core/constants.js';
+import { getHomeSkillDirs } from '../core/constants.js';
 
 /**
  * Tree item for skill entries.
@@ -353,7 +353,7 @@ export class SkillsViewProvider implements vscode.TreeDataProvider<SkillsTreeEle
     const homeDir = os.homedir();
     const targets: TargetWithStatus[] = [];
 
-    for (const { agent, path: skillDir } of USER_HOME_SKILL_DIRS) {
+    for (const { agent, path: skillDir } of getHomeSkillDirs()) {
       const deployPath = path.join(homeDir, skillDir, skill.name, 'SKILL.md');
       
       try {
