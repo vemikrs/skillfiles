@@ -668,7 +668,7 @@
             "codex": {
               "vendor": "openai",
               "instructionPaths": ["AGENTS.md"],
-              "skillFolderPath": ".agents/skills",
+              "skillFolderPath": ".codex/skills",
               "skillFileName": "SKILL.md"
             },
             "cursor": {
