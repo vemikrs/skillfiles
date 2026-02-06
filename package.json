@@ -1,12 +1,13 @@
 {
   "name": "skillfiles",
-  "displayName": "Skillfiles",
-  "description": "Centrally manage AI agent skill definitions across repositories",
+  "displayName": "%displayName%",
+  "description": "%description%",
   "version": "0.1.6",
   "publisher": "ve",
   "license": "MIT",
   "packageManager": "pnpm@10.28.2",
   "icon": "resources/icon.png",
+  "l10n": "./l10n",
   "repository": {
     "type": "git",
     "url": "https://github.com/vemikrs/skillfiles"
@@ -43,241 +44,241 @@
     "commands": [
       {
         "command": "skillfiles.openSkill",
-        "title": "Open Skill",
+        "title": "%command.openSkill%",
         "category": "Skillfiles",
         "icon": "$(file-code)"
       },
       {
         "command": "skillfiles.createSkill",
-        "title": "Create New Skill",
+        "title": "%command.createSkill%",
         "category": "Skillfiles",
         "icon": "$(add)"
       },
       {
         "command": "skillfiles.pushSkill",
-        "title": "Push Skill to Repository",
+        "title": "%command.pushSkill%",
         "category": "Skillfiles",
         "icon": "$(repo-push)"
       },
       {
         "command": "skillfiles.collectSkill",
-        "title": "Collect Skill from Repository",
+        "title": "%command.collectSkill%",
         "category": "Skillfiles",
         "icon": "$(repo-pull)"
       },
       {
         "command": "skillfiles.rollbackSkill",
-        "title": "Rollback to Snapshot",
+        "title": "%command.rollbackSkill%",
         "category": "Skillfiles",
         "icon": "$(history)"
       },
       {
         "command": "skillfiles.previewSnapshot",
-        "title": "Preview Snapshot",
+        "title": "%command.previewSnapshot%",
         "category": "Skillfiles",
         "icon": "$(preview)"
       },
       {
         "command": "skillfiles.showDiff",
-        "title": "Show Diff",
+        "title": "%command.showDiff%",
         "category": "Skillfiles",
         "icon": "$(diff)"
       },
       {
         "command": "skillfiles.refreshAll",
-        "title": "Refresh All Views",
+        "title": "%command.refreshAll%",
         "category": "Skillfiles",
         "icon": "$(refresh)"
       },
       {
         "command": "skillfiles.refreshSkills",
-        "title": "Refresh Skills",
+        "title": "%command.refreshSkills%",
         "category": "Skillfiles",
         "icon": "$(refresh)"
       },
       {
         "command": "skillfiles.refreshRepoStatus",
-        "title": "Refresh Deploy Status",
+        "title": "%command.refreshRepoStatus%",
         "category": "Skillfiles",
         "icon": "$(refresh)"
       },
       {
         "command": "skillfiles.refreshHistory",
-        "title": "Refresh History",
+        "title": "%command.refreshHistory%",
         "category": "Skillfiles",
         "icon": "$(refresh)"
       },
       {
         "command": "skillfiles.bulkPush",
-        "title": "Bulk Push All Skills",
+        "title": "%command.bulkPush%",
         "category": "Skillfiles",
         "icon": "$(cloud-upload)"
       },
       {
         "command": "skillfiles.bulkCollect",
-        "title": "Bulk Collect All Skills",
+        "title": "%command.bulkCollect%",
         "category": "Skillfiles",
         "icon": "$(cloud-download)"
       },
       {
         "command": "skillfiles.openAuditLog",
-        "title": "Open Audit Log",
+        "title": "%command.openAuditLog%",
         "category": "Skillfiles",
         "icon": "$(list-unordered)"
       },
       {
         "command": "skillfiles.setupScanRoots",
-        "title": "Setup Scan Roots",
+        "title": "%command.setupScanRoots%",
         "category": "Skillfiles",
         "icon": "$(folder-opened)"
       },
       {
         "command": "skillfiles.discoverSkills",
-        "title": "Discover Skills from Repositories",
+        "title": "%command.discoverSkills%",
         "category": "Skillfiles",
         "icon": "$(search)"
       },
       {
         "command": "skillfiles.scanSharedSkills",
-        "title": "Import Shared Skills",
+        "title": "%command.scanSharedSkills%",
         "category": "Skillfiles",
         "icon": "$(cloud-download)"
       },
       {
         "command": "skillfiles.copySkillPath",
-        "title": "Copy Skill Path",
+        "title": "%command.copySkillPath%",
         "category": "Skillfiles",
         "icon": "$(clippy)"
       },
       {
         "command": "skillfiles.deleteSkill",
-        "title": "Delete Skill",
+        "title": "%command.deleteSkill%",
         "category": "Skillfiles",
         "icon": "$(trash)"
       },
       {
         "command": "skillfiles.copyTargetPath",
-        "title": "Copy Target Path",
+        "title": "%command.copyTargetPath%",
         "category": "Skillfiles",
         "icon": "$(clippy)"
       },
       {
         "command": "skillfiles.openTarget",
-        "title": "Open Target File",
+        "title": "%command.openTarget%",
         "category": "Skillfiles",
         "icon": "$(go-to-file)"
       },
       {
         "command": "skillfiles.pushAllInRepo",
-        "title": "Push All Skills in Repository",
+        "title": "%command.pushAllInRepo%",
         "category": "Skillfiles",
         "icon": "$(repo-push)"
       },
       {
         "command": "skillfiles.collectAllInRepo",
-        "title": "Collect All Skills in Repository",
+        "title": "%command.collectAllInRepo%",
         "category": "Skillfiles",
         "icon": "$(repo-pull)"
       },
       {
         "command": "skillfiles.clearHistory",
-        "title": "Clear History",
+        "title": "%command.clearHistory%",
         "category": "Skillfiles",
         "icon": "$(trash)"
       },
       {
         "command": "skillfiles.showSnapshotDiff",
-        "title": "Show Snapshot Diff",
+        "title": "%command.showSnapshotDiff%",
         "category": "Skillfiles",
         "icon": "$(diff)"
       },
       {
         "command": "skillfiles.addTarget",
-        "title": "Add Target",
+        "title": "%command.addTarget%",
         "category": "Skillfiles",
         "icon": "$(add)"
       },
       {
         "command": "skillfiles.removeTarget",
-        "title": "Remove Target",
+        "title": "%command.removeTarget%",
         "category": "Skillfiles",
         "icon": "$(trash)"
       },
       {
         "command": "skillfiles.manageTargets",
-        "title": "Manage Targets",
+        "title": "%command.manageTargets%",
         "category": "Skillfiles",
         "icon": "$(list-unordered)"
       },
       {
         "command": "skillfiles.editVariable",
-        "title": "Edit Variable",
+        "title": "%command.editVariable%",
         "category": "Skillfiles",
         "icon": "$(edit)"
       },
       {
         "command": "skillfiles.refreshVariables",
-        "title": "Refresh Variables",
+        "title": "%command.refreshVariables%",
         "category": "Skillfiles",
         "icon": "$(refresh)"
       },
       {
         "command": "skillfiles.editDefaultVariable",
-        "title": "Edit Default Variable",
+        "title": "%command.editDefaultVariable%",
         "category": "Skillfiles",
         "icon": "$(edit)"
       },
       {
         "command": "skillfiles.editHierarchicalVariable",
-        "title": "Edit Variable",
+        "title": "%command.editHierarchicalVariable%",
         "category": "Skillfiles",
         "icon": "$(edit)"
       },
       {
         "command": "skillfiles.setCategory",
-        "title": "Set Category",
+        "title": "%command.setCategory%",
         "category": "Skillfiles",
         "icon": "$(folder)"
       },
       {
         "command": "skillfiles.deleteResource",
-        "title": "Delete",
+        "title": "%command.deleteResource%",
         "category": "Skillfiles",
         "icon": "$(trash)"
       },
       {
         "command": "skillfiles.renameResource",
-        "title": "Rename",
+        "title": "%command.renameResource%",
         "category": "Skillfiles",
         "icon": "$(edit)"
       },
       {
         "command": "skillfiles.revealInFinder",
-        "title": "Open Containing Folder",
+        "title": "%command.revealInFinder%",
         "category": "Skillfiles",
         "icon": "$(folder-opened)"
       },
       {
         "command": "skillfiles.addResourceFile",
-        "title": "New File",
+        "title": "%command.addResourceFile%",
         "category": "Skillfiles",
         "icon": "$(new-file)"
       },
       {
         "command": "skillfiles.addResourceFolder",
-        "title": "New Folder",
+        "title": "%command.addResourceFolder%",
         "category": "Skillfiles",
         "icon": "$(new-folder)"
       },
       {
         "command": "skillfiles.validateSkill",
-        "title": "Validate Skill",
+        "title": "%command.validateSkill%",
         "category": "Skillfiles",
         "icon": "$(check)"
       },
       {
         "command": "skillfiles.validateAllSkills",
-        "title": "Validate All Skills",
+        "title": "%command.validateAllSkills%",
         "category": "Skillfiles",
         "icon": "$(checklist)"
       }
@@ -286,7 +287,7 @@
       "activitybar": [
         {
           "id": "skillfiles",
-          "title": "Skillfiles",
+          "title": "%viewsContainer.skillfiles%",
           "icon": "resources/skillfiles.svg"
         }
       ]
@@ -295,22 +296,22 @@
       "skillfiles": [
         {
           "id": "skillfiles.skillsView",
-          "name": "Skills",
+          "name": "%view.skills%",
           "icon": "$(file-code)"
         },
         {
           "id": "skillfiles.repoStatusView",
-          "name": "Deploy Status",
+          "name": "%view.repoStatus%",
           "icon": "$(cloud-upload)"
         },
         {
           "id": "skillfiles.variablesView",
-          "name": "Variables",
+          "name": "%view.variables%",
           "icon": "$(symbol-variable)"
         },
         {
           "id": "skillfiles.historyView",
-          "name": "History",
+          "name": "%view.history%",
           "icon": "$(history)"
         }
       ]
@@ -318,17 +319,17 @@
     "viewsWelcome": [
       {
         "view": "skillfiles.skillsView",
-        "contents": "Get Started!\n\n[$(cloud-download) Import Shared Skills](command:skillfiles.scanSharedSkills)\nImport skills from ~/.agent/, ~/.gemini/, etc.\n\n[$(search) Scan Repositories](command:skillfiles.discoverSkills)\nDiscover skills from scan roots\n\n[$(add) Create New Skill](command:skillfiles.createSkill)\n\n[$(folder-opened) Setup Scan Roots](command:skillfiles.setupScanRoots)",
+        "contents": "%welcome.skills%",
         "when": "skillfiles.noSkills"
       },
       {
         "view": "skillfiles.repoStatusView",
-        "contents": "No targets registered.\n\n[$(cloud-download) Import Shared Skills](command:skillfiles.scanSharedSkills)\n\n[$(search) Scan Repositories](command:skillfiles.discoverSkills)\n\n[$(folder-opened) Setup Scan Roots](command:skillfiles.setupScanRoots)",
+        "contents": "%welcome.repoStatus%",
         "when": "skillfiles.noRepos"
       },
       {
         "view": "skillfiles.historyView",
-        "contents": "No history yet.\n\nSnapshots are automatically saved when you\nPush or Collect skills.",
+        "contents": "%welcome.history%",
         "when": "skillfiles.noHistory"
       }
     ],
@@ -569,12 +570,12 @@
         "skillfiles.registryPath": {
           "type": "string",
           "default": "~/.skillfiles",
-          "description": "Path to the skill registry root"
+          "description": "%config.registryPath%"
         },
         "skillfiles.sharedSkillRoot": {
           "type": "string",
           "default": "~",
-          "description": "Path to shared skills root (scans ~/.agent, ~/.gemini, etc.)"
+          "description": "%config.sharedSkillRoot%"
         },
         "skillfiles.scanRoots": {
           "type": "array",
@@ -584,11 +585,11 @@
             "properties": {
               "key": {
                 "type": "string",
-                "description": "Unique key for this scan root"
+                "description": "%config.scanRoots.key%"
               },
               "path": {
                 "type": "string",
-                "description": "Absolute path to scan"
+                "description": "%config.scanRoots.path%"
               }
             },
             "required": [
@@ -596,17 +597,17 @@
               "path"
             ]
           },
-          "description": "List of scan roots with key-path pairs"
+          "description": "%config.scanRoots%"
         },
         "skillfiles.scanLimit": {
           "type": "number",
           "default": 200,
-          "description": "Maximum number of repositories to scan"
+          "description": "%config.scanLimit%"
         },
         "skillfiles.autoPushOnSave": {
           "type": "boolean",
           "default": false,
-          "description": "Automatically push changes when skill.md is saved"
+          "description": "%config.autoPushOnSave%"
         },
         "skillfiles.conflictPolicy": {
           "type": "string",
@@ -616,27 +617,27 @@
             "preferRepo"
           ],
           "default": "ask",
-          "description": "Policy for handling conflicts during collect"
+          "description": "%config.conflictPolicy%"
         },
         "skillfiles.dryRun": {
           "type": "boolean",
           "default": false,
-          "description": "Preview changes without writing files"
+          "description": "%config.dryRun%"
         },
         "skillfiles.safeMode": {
           "type": "boolean",
           "default": true,
-          "description": "Require confirmation for destructive operations"
+          "description": "%config.safeMode%"
         },
         "skillfiles.auditLogRetentionDays": {
           "type": "number",
           "default": 90,
-          "description": "Number of days to retain audit logs"
+          "description": "%config.auditLogRetentionDays%"
         },
         "skillfiles.historyRetentionCount": {
           "type": "number",
           "default": 50,
-          "description": "Number of history snapshots to retain per skill"
+          "description": "%config.historyRetentionCount%"
         },
         "skillfiles.agentProfiles": {
           "type": "object",
@@ -725,28 +726,28 @@
               "skillFileName": "SKILL.md"
             }
           },
-          "description": "Agent-specific file path configurations. Each agent can have instructionPaths (for reference), skillFolderPath, and skillFileName.",
+          "description": "%config.agentProfiles%",
           "additionalProperties": {
             "type": "object",
             "properties": {
               "vendor": {
                 "type": "string",
-                "description": "Vendor name"
+                "description": "%config.agentProfiles.vendor%"
               },
               "instructionPaths": {
                 "type": "array",
                 "items": {
                   "type": "string"
                 },
-                "description": "Instruction file paths (not managed by Skillfiles)"
+                "description": "%config.agentProfiles.instructionPaths%"
               },
               "skillFolderPath": {
                 "type": "string",
-                "description": "Folder path where skills are deployed"
+                "description": "%config.agentProfiles.skillFolderPath%"
               },
               "skillFileName": {
                 "type": "string",
-                "description": "Skill file name pattern"
+                "description": "%config.agentProfiles.skillFileName%"
               }
             }
           }
