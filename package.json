@@ -2,7 +2,7 @@
   "name": "skillfiles",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "publisher": "ve",
   "license": "MIT",
   "packageManager": "pnpm@10.28.2",
