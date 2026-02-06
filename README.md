@@ -6,37 +6,7 @@ Skillfiles lets you define agent behaviors (skill.md files) in one place and dep
 
 ## Architecture Overview
 
-```mermaid
-graph TD
-    subgraph Registry["📁 Central Registry (~/.skillfiles)"]
-        Skills["🛠️ skills/"]
-        History["📜 history/"]
-        Meta["📋 registry.yaml"]
-    end
-
-    subgraph Shared["🏠 Shared Skills (~/.agents)"]
-        SharedSkills["🛠️ skills/"]
-    end
-
-    subgraph Targets["🎯 Deployment Targets"]
-        Repo1["📂 Repo A (.github/skills/)"]
-        Repo2["📂 Repo B (.claude/skills/)"]
-        Agent1["🤖 ~/.gemini/skills/"]
-        Agent2["🤖 ~/.agent/skills/"]
-    end
-
-    Skills -- "Push" --> Repo1
-    Skills -- "Push" --> Repo2
-    SharedSkills -- "Push" --> Agent1
-    SharedSkills -- "Push" --> Agent2
-
-    Repo1 -- "Collect" --> Skills
-    Repo2 -- "Collect" --> Skills
-    Agent1 -- "Collect" --> SharedSkills
-
-    Meta -.-> Skills
-    History -.-> Skills
-```
+![Architecture Overview](resources/architecture.png)
 
 | Flow        | Description                                               |
 | ----------- | --------------------------------------------------------- |
