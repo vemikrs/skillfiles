@@ -44,10 +44,22 @@ export class RegistryStore {
       return await this.loadRegistry();
     } catch (error) {
       if (error instanceof RegistryNotFoundError) {
-        // Create default empty registry
+        // Create default empty registry with comprehensive agent profiles
         const defaultRegistry: Registry = {
           registryRoot: path.dirname(this.registryPath),
           agentProfiles: {
+            'agent': {
+              vendor: 'agentskills.io',
+              instructionPaths: ['AGENTS.md'],
+              skillFolderPath: '.agent/skills',
+              skillFileName: 'SKILL.md'
+            },
+            'gemini': {
+              vendor: 'google',
+              instructionPaths: ['GEMINI.md', '.gemini/styleguide.md'],
+              skillFolderPath: '.gemini/skills',
+              skillFileName: 'SKILL.md'
+            },
             'copilot': {
               vendor: 'github',
               instructionPaths: ['.github/copilot-instructions.md', 'AGENTS.md'],
@@ -58,6 +70,12 @@ export class RegistryStore {
               vendor: 'anthropic',
               instructionPaths: ['CLAUDE.md'],
               skillFolderPath: '.claude/skills',
+              skillFileName: 'SKILL.md'
+            },
+            'codex': {
+              vendor: 'openai',
+              instructionPaths: ['AGENTS.md'],
+              skillFolderPath: '.agents/skills',
               skillFileName: 'SKILL.md'
             }
           },
