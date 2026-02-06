@@ -50,7 +50,7 @@ async function detectUnregisteredHomeSkills(registryStore: RegistryStore): Promi
       const entries = await fs.readdir(fullPath, { withFileTypes: true });
       
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        if (!entry.isDirectory()) {continue;}
         
         const skillFolderPath = path.join(fullPath, entry.name);
         const skillMdPath = path.join(skillFolderPath, 'SKILL.md');
@@ -89,7 +89,7 @@ async function promptCollectHomeSkills(
   registryRoot: string,
   onComplete: () => void
 ): Promise<void> {
-  if (unregistered.length === 0) return;
+  if (unregistered.length === 0) {return;}
 
   const skillList = unregistered.map(s => `${s.name} (${s.agent})`).join(', ');
   const action = await vscode.window.showInformationMessage(

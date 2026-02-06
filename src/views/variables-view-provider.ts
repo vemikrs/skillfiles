@@ -421,7 +421,7 @@ export class VariablesViewProvider implements vscode.TreeDataProvider<VariablesT
     const varPattern = /\{\{([A-Z_][A-Z0-9_]*)\}\}/g;
 
     for (const skill of this.registry?.skills || []) {
-      if (!skill.folderPath) continue;
+      if (!skill.folderPath) {continue;}
       try {
         const template = await fs.readFile(path.join(skill.folderPath, 'SKILL.md'), 'utf-8');
         let match;

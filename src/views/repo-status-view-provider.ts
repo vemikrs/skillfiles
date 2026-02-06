@@ -238,7 +238,7 @@ export class RepoStatusViewProvider implements vscode.TreeDataProvider<DeploySta
     const agentTargetMap = new Map<string, TargetWithStatus[]>();
     
     for (const [, target] of this.targetStatusCache) {
-      if (target.repoPath !== repoPath) continue;
+      if (target.repoPath !== repoPath) {continue;}
       
       const targets = agentTargetMap.get(target.agent) || [];
       targets.push(target);

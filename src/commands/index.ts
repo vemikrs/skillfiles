@@ -1364,10 +1364,10 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
 
             // Sort: agent first, then gemini, then alphabetically
             sharedLocations.sort((a, b) => {
-              if (a.agent === 'agent') return -1;
-              if (b.agent === 'agent') return 1;
-              if (a.agent === 'gemini') return -1;
-              if (b.agent === 'gemini') return 1;
+              if (a.agent === 'agent') {return -1;}
+              if (b.agent === 'agent') {return 1;}
+              if (a.agent === 'gemini') {return -1;}
+              if (b.agent === 'gemini') {return 1;}
               return a.label.localeCompare(b.label);
             });
 
@@ -1422,7 +1422,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             registry.skills[skillIdx].targets.push(newTarget);
             
             // Also add to registry.targets for backwards compatibility
-            if (!registry.targets) registry.targets = [];
+            if (!registry.targets) {registry.targets = [];}
             registry.targets.push(newTarget);
             
             await deps.registryStore.saveRegistry(registry);
@@ -1530,10 +1530,10 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
 
           // Sort to put agent first (default), then gemini
           agentItems.sort((a, b) => {
-            if (a.agent === 'agent') return -1;
-            if (b.agent === 'agent') return 1;
-            if (a.agent === 'gemini') return -1;
-            if (b.agent === 'gemini') return 1;
+            if (a.agent === 'agent') {return -1;}
+            if (b.agent === 'agent') {return 1;}
+            if (a.agent === 'gemini') {return -1;}
+            if (b.agent === 'gemini') {return 1;}
             return a.label.localeCompare(b.label);
           });
 
@@ -1823,7 +1823,7 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
           
           switch (item.section) {
             case 'global': {
-              if (!registry.globalVars) registry.globalVars = {};
+              if (!registry.globalVars) {registry.globalVars = {};}
               if (newValue === '') {
                 delete registry.globalVars[item.varName];
               } else {
@@ -1833,9 +1833,9 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             }
             
             case 'repo': {
-              if (!registry.repoVars) registry.repoVars = {};
+              if (!registry.repoVars) {registry.repoVars = {};}
               const repoPath = item.groupKey || '';
-              if (!registry.repoVars[repoPath]) registry.repoVars[repoPath] = {};
+              if (!registry.repoVars[repoPath]) {registry.repoVars[repoPath] = {};}
               if (newValue === '') {
                 delete registry.repoVars[repoPath][item.varName];
               } else {
@@ -1845,9 +1845,9 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             }
             
             case 'agent': {
-              if (!registry.agentVars) registry.agentVars = {};
+              if (!registry.agentVars) {registry.agentVars = {};}
               const agent = item.groupKey || '';
-              if (!registry.agentVars[agent]) registry.agentVars[agent] = {};
+              if (!registry.agentVars[agent]) {registry.agentVars[agent] = {};}
               if (newValue === '') {
                 delete registry.agentVars[agent][item.varName];
               } else {
@@ -1857,9 +1857,9 @@ You can use variables like \`{{REPO_NAME}}\` that will be replaced per-target.
             }
             
             case 'category': {
-              if (!registry.categoryVars) registry.categoryVars = {};
+              if (!registry.categoryVars) {registry.categoryVars = {};}
               const category = item.groupKey || '';
-              if (!registry.categoryVars[category]) registry.categoryVars[category] = {};
+              if (!registry.categoryVars[category]) {registry.categoryVars[category] = {};}
               if (newValue === '') {
                 delete registry.categoryVars[category][item.varName];
               } else {
