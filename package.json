@@ -253,7 +253,7 @@
       },
       {
         "command": "skillfiles.revealInFinder",
-        "title": "Reveal in Finder",
+        "title": "Open Containing Folder",
         "category": "Skillfiles",
         "icon": "$(folder-opened)"
       },
