@@ -8,17 +8,7 @@ import type { DiffEngine } from '../core/diff-engine.js';
 import type { TemplateEngine } from '../core/template-engine.js';
 import { parseSkillFolder } from '../core/skill-parser.js';
 import { computeHash } from '../utils/hash.js';
-
-/**
- * Known user home skill directories.
- */
-const USER_HOME_SKILL_DIRS = [
-  { agent: 'agent', path: '.agent/skills' },
-  { agent: 'gemini', path: '.gemini/skills' },
-  { agent: 'claude', path: '.claude/skills' },
-  { agent: 'copilot', path: '.github/skills' },
-  { agent: 'codex', path: '.codex/skills' }
-];
+import { USER_HOME_SKILL_DIRS } from '../core/constants.js';
 
 /**
  * Tree item for skill entries.

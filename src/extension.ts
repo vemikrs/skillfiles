@@ -12,6 +12,7 @@ import { DiffEngine } from './core/diff-engine.js';
 import { RepoScanner } from './core/repo-scanner.js';
 import { SettingsManager } from './core/settings-manager.js';
 import { Guardrails } from './core/guardrails.js';
+import { USER_HOME_SKILL_DIRS } from './core/constants.js';
 
 // Services
 import { PushService } from './services/push-service.js';
@@ -26,17 +27,6 @@ import { VariablesViewProvider } from './views/variables-view-provider.js';
 
 // Commands
 import { registerCommands } from './commands/index.js';
-
-/**
- * Known user home skill directories.
- */
-const USER_HOME_SKILL_DIRS = [
-  { agent: 'agent', path: '.agent/skills' },
-  { agent: 'gemini', path: '.gemini/skills' },
-  { agent: 'claude', path: '.claude/skills' },
-  { agent: 'copilot', path: '.github/skills' },
-  { agent: 'codex', path: '.codex/skills' }
-];
 
 interface DetectedSkill {
   name: string;
