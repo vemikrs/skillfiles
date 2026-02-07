@@ -60,6 +60,12 @@ export class RegistryStore {
               skillFolderPath: '.gemini/skills',
               skillFileName: 'SKILL.md'
             },
+            'antigravity': {
+              vendor: 'google',
+              instructionPaths: ['GEMINI.md', '.gemini/styleguide.md'],
+              skillFolderPath: '.gemini/antigravity/skills',
+              skillFileName: 'SKILL.md'
+            },
             'copilot': {
               vendor: 'github',
               instructionPaths: ['.github/copilot-instructions.md', 'AGENTS.md'],

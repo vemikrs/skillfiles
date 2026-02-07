@@ -3,13 +3,9 @@
  */
 
 import * as vscode from 'vscode';
+import type { AgentProfile } from './types.js';
 
-export interface AgentProfile {
-  vendor: string;
-  instructionPaths: string[];
-  skillFolderPath: string;
-  skillFileName: string;
-}
+export type { AgentProfile } from './types.js';
 
 export interface HomeSkillDir {
   agent: string;
