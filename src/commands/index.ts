@@ -399,15 +399,45 @@ export function registerCommands(
           return;
         }
 
+        const skillPath = item.skill.folderPath;
+        if (!skillPath) {
+          return;
+        }
+
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const skillMdPath = path.join(skillPath, 'SKILL.md');
+
+        // Verify file exists before attempting to open
         try {
-          const skillPath = item.skill.folderPath;
-          if (skillPath) {
-            // folderPath is the skill folder, open SKILL.md inside it
-            const path = await import('path');
-            const skillMdPath = path.join(skillPath, 'SKILL.md');
-            const doc = await vscode.workspace.openTextDocument(skillMdPath);
-            await vscode.window.showTextDocument(doc);
+          await fs.access(skillMdPath);
+        } catch {
+          const action = await vscode.window.showWarningMessage(
+            `Skill not found on disk: ${item.skill.name}. The file may have been deleted or moved.`,
+            'Remove from Registry',
+            'Close'
+          );
+          if (action === 'Remove from Registry') {
+            try {
+              const registry = await deps.registryStore.loadRegistry();
+              registry.skills = registry.skills.filter(s => s.name !== item.skill.name);
+              if (registry.targets) {
+                registry.targets = registry.targets.filter(t => t.skillName !== item.skill.name);
+              }
+              await deps.registryStore.saveRegistry(registry);
+              deps.skillsView.refresh();
+              deps.repoStatusView.refresh();
+              vscode.window.showInformationMessage(`Removed "${item.skill.name}" from registry.`);
+            } catch (err) {
+              vscode.window.showErrorMessage(`Failed to remove from registry: ${err}`);
+            }
           }
+          return;
+        }
+
+        try {
+          const doc = await vscode.workspace.openTextDocument(skillMdPath);
+          await vscode.window.showTextDocument(doc);
         } catch (error) {
           vscode.window.showErrorMessage(`Could not open skill: ${error}`);
         }

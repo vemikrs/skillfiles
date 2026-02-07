@@ -74,6 +74,12 @@ const DEFAULT_AGENT_PROFILES: Record<string, AgentProfile> = {
     skillFolderPath: '.gemini/skills',
     skillFileName: 'SKILL.md'
   },
+  antigravity: {
+    vendor: 'google',
+    instructionPaths: ['GEMINI.md', '.gemini/styleguide.md'],
+    skillFolderPath: '.gemini/antigravity/skills',
+    skillFileName: 'SKILL.md'
+  },
   aider: {
     vendor: 'aider',
     instructionPaths: ['CONVENTIONS.md', 'AGENTS.md'],

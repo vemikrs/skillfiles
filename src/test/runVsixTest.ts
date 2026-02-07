@@ -12,12 +12,8 @@
  */
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const VSIX_PATH = '/tmp/skillfiles-test.vsix';
 const TEST_VSCODE_PATH = '/tmp/vscode-vsix-test';
@@ -117,11 +113,11 @@ async function verifyInstallation(cliPath: string): Promise<boolean> {
     encoding: 'utf-8'
   });
   
-  if (result.includes('mi.skillfiles')) {
-    console.log('✅ Extension mi.skillfiles is in the extensions list');
+  if (result.includes('ve.skillfiles')) {
+    console.log('✅ Extension ve.skillfiles is in the extensions list');
     return true;
   } else {
-    console.log('❌ Extension mi.skillfiles NOT found in extensions list');
+    console.log('❌ Extension ve.skillfiles NOT found in extensions list');
     return false;
   }
 }

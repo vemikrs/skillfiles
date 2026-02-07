@@ -13,3 +13,8 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 5
+    ignore:
+      # VS Code v1.107 baseline constraint - do not auto-upgrade
+      - dependency-name: "@types/vscode"
+      - dependency-name: "@vscode/test-electron"
+      - dependency-name: "@vscode/vsce"

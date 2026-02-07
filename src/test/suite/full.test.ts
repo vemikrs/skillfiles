@@ -46,10 +46,10 @@ export async function runFullTests(): Promise<{ passed: number; failed: number; 
 
   // Test 6: Package metadata should be correct
   try {
-    const ext = vscode.extensions.getExtension('mi.skillfiles');
+    const ext = vscode.extensions.getExtension('ve.skillfiles');
     if (ext) {
       const pkg = ext.packageJSON;
-      if (pkg.name === 'skillfiles' && pkg.publisher === 'mi' && pkg.version) {
+      if (pkg.name === 'skillfiles' && pkg.publisher === 've' && pkg.version) {
         console.log('✅ Package metadata correct');
         passed++;
       } else {
@@ -64,7 +64,7 @@ export async function runFullTests(): Promise<{ passed: number; failed: number; 
 
   // Test 7: Contributes section should exist
   try {
-    const ext = vscode.extensions.getExtension('mi.skillfiles');
+    const ext = vscode.extensions.getExtension('ve.skillfiles');
     if (ext) {
       const pkg = ext.packageJSON;
       if (pkg.contributes?.commands && pkg.contributes?.views && pkg.contributes?.viewsContainers) {
@@ -82,7 +82,7 @@ export async function runFullTests(): Promise<{ passed: number; failed: number; 
 
   // Test 8: View IDs should match between package.json and registration
   try {
-    const ext = vscode.extensions.getExtension('mi.skillfiles');
+    const ext = vscode.extensions.getExtension('ve.skillfiles');
     if (ext) {
       const pkg = ext.packageJSON;
       const expectedViewIds = ['skillfiles.skillsView', 'skillfiles.repoStatusView', 'skillfiles.historyView'];
