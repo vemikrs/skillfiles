@@ -783,7 +783,7 @@
     "package": "vsce package --no-dependencies -o dist/"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
+    "@eslint/js": "^10.0.1",
     "@types/chai": "^5.2.3",
     "@types/js-yaml": "^4.0.9",
     "@types/mocha": "^10.0.10",
@@ -804,8 +804,7 @@
     "sinon": "^21.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0",
-    "@types/minimatch": "^6.0.0"
+    "typescript-eslint": "^8.54.0"
   },
   "dependencies": {
     "handlebars": "^4.7.8",
