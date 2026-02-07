@@ -11,7 +11,7 @@ export async function runSmokeTests(): Promise<{ passed: number; failed: number;
 
   // Test 1: Extension should be present
   try {
-    const ext = vscode.extensions.getExtension('mi.skillfiles');
+    const ext = vscode.extensions.getExtension('ve.skillfiles');
     if (ext) {
       console.log('✅ Extension should be present');
       passed++;
@@ -26,7 +26,7 @@ export async function runSmokeTests(): Promise<{ passed: number; failed: number;
 
   // Test 2: Extension should activate
   try {
-    const ext = vscode.extensions.getExtension('mi.skillfiles');
+    const ext = vscode.extensions.getExtension('ve.skillfiles');
     if (ext) {
       if (!ext.isActive) {
         await ext.activate();
@@ -77,7 +77,7 @@ export async function runSmokeTests(): Promise<{ passed: number; failed: number;
 
   // Test 4: Views should be defined in package.json
   try {
-    const ext = vscode.extensions.getExtension('mi.skillfiles');
+    const ext = vscode.extensions.getExtension('ve.skillfiles');
     if (ext) {
       const packageJson = ext.packageJSON;
       if (packageJson.contributes?.views?.skillfiles) {

@@ -113,11 +113,11 @@ async function verifyInstallation(cliPath: string): Promise<boolean> {
     encoding: 'utf-8'
   });
   
-  if (result.includes('mi.skillfiles')) {
-    console.log('✅ Extension mi.skillfiles is in the extensions list');
+  if (result.includes('ve.skillfiles')) {
+    console.log('✅ Extension ve.skillfiles is in the extensions list');
     return true;
   } else {
-    console.log('❌ Extension mi.skillfiles NOT found in extensions list');
+    console.log('❌ Extension ve.skillfiles NOT found in extensions list');
     return false;
   }
 }
