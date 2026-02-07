@@ -1,25 +1,102 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
       - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "pnpm"
-
       - run: pnpm install
       - run: pnpm lint
       - run: pnpm compile
       - run: pnpm test:unit
+
+  e2e:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - run: pnpm install
+      
+      - name: Run E2E Tests
+        id: e2e
+        shell: bash
+        run: |
+          set -o pipefail
+          xvfb-run -a pnpm test:e2e | tee e2e-output.txt
+      
+      - name: Post E2E Report
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('e2e-output.txt', 'utf8');
+            
+            // Parse counts
+            const smokeMatch = log.match(/Smoke Tests:\s+(\d+) passed,\s+(\d+) failed/);
+            const fullMatch = log.match(/Full Tests:\s+(\d+) passed,\s+(\d+) failed/);
+            const totalMatch = log.match(/TOTAL:\s+(\d+) passed,\s+(\d+) failed/);
+            
+            const smokePassed = smokeMatch ? smokeMatch[1] : '?';
+            const smokeFailed = smokeMatch ? smokeMatch[2] : '?';
+            const fullPassed = fullMatch ? fullMatch[1] : '?';
+            const fullFailed = fullMatch ? fullMatch[2] : '?';
+            const totalPassed = totalMatch ? totalMatch[1] : '?';
+            const totalFailed = totalMatch ? totalMatch[2] : '?';
+            
+            const isSuccess = totalFailed === '0';
+            const icon = isSuccess ? '✅' : '❌';
+            
+            const body = `## ${icon} E2E Test Report
+            
+            | Suite | Passed | Failed |
+            |-------|--------|--------|
+            | Smoke | ${smokePassed} | ${smokeFailed} |
+            | Full  | ${fullPassed} | ${fullFailed} |
+            | **Total** | **${totalPassed}** | **${totalFailed}** |
+            
+            ${isSuccess ? 'All tests passed!' : '**Failures detected.** Check the logs for details.'}
+            `;
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(c => c.body.includes('##') && c.body.includes('E2E Test Report'));
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
