@@ -12,12 +12,8 @@
  */
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const VSIX_PATH = '/tmp/skillfiles-test.vsix';
 const TEST_VSCODE_PATH = '/tmp/vscode-vsix-test';
