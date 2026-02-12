@@ -809,6 +809,6 @@
   "dependencies": {
     "handlebars": "^4.7.8",
     "js-yaml": "^4.1.1",
-    "minimatch": "^10.1.2"
+    "minimatch": "^10.2.0"
   }
 }
