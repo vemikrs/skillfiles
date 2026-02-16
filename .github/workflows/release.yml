@@ -93,6 +93,7 @@ jobs:
         run: |
           git add VERSION package.json
           git commit -m "chore(release): v${{ steps.version.outputs.version }} [skip ci]" || true
+          git stash --include-untracked || true
           git fetch origin main && git rebase origin/main
           git push origin main
 
