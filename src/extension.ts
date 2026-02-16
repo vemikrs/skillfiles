@@ -9,9 +9,7 @@ import { HistoryManager } from './core/history-manager.js';
 import { AuditLogStore } from './core/audit-log-store.js';
 import { TemplateEngine } from './core/template-engine.js';
 import { DiffEngine } from './core/diff-engine.js';
-import { RepoScanner } from './core/repo-scanner.js';
 import { SettingsManager } from './core/settings-manager.js';
-import { Guardrails } from './core/guardrails.js';
 import { getHomeSkillDirs } from './core/constants.js';
 
 // Services
@@ -182,14 +180,7 @@ export function activate(context: vscode.ExtensionContext) {
     // 2. Get configured paths
     const registryPath = settingsManager.getRegistryPath();
     console.log('[Skillfiles] Registry path:', registryPath);
-    const scanRoots = settingsManager.getScanRoots();
     const settings = settingsManager.getSettings();
-
-    // 3. Initialize guardrails
-    const _guardrails = new Guardrails({
-      allowedPaths: scanRoots.map(r => r.path),
-      excludePatterns: ['**/node_modules/**', '**/.git/**']
-    });
 
     // 4. Initialize core components
     const registryStore = new RegistryStore(registryPath);
@@ -197,7 +188,6 @@ export function activate(context: vscode.ExtensionContext) {
     const auditLog = new AuditLogStore(registryPath);
     const templateEngine = new TemplateEngine();
     const diffEngine = new DiffEngine();
-    const _repoScanner = new RepoScanner(scanRoots);
 
     // 5. Initialize services
     const pushService = new PushService(historyManager, auditLog, templateEngine);

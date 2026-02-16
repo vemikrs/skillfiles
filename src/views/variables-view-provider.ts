@@ -6,7 +6,6 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 // Tree item types
-type ItemType = 'section' | 'group' | 'variable';
 type VarSource = 'global' | 'repo' | 'agent' | 'category' | 'skill' | 'target';
 
 /**
