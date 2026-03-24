@@ -13,9 +13,11 @@ async function main() {
     console.log('Cache path:', cachePath);
     
     // Download VS Code to a cacheable location
+    // Increase timeout to 120s to handle slow CI network (default is 10s idle timeout)
     const vscodeExecutablePath = await downloadAndUnzipVSCode({
       cachePath,
-      version: '1.107.0'
+      version: '1.107.0',
+      timeout: 120_000
     });
     
     console.log('VS Code downloaded to:', vscodeExecutablePath);
