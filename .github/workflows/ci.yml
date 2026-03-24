@@ -53,6 +53,7 @@ jobs:
         id: e2e
         shell: bash
         run: |
+          set +e
           for attempt in 1 2 3; do
             xvfb-run -a pnpm test:e2e 2>&1 | tee e2e-output.txt
             status=${PIPESTATUS[0]}
