@@ -49,23 +49,33 @@ jobs:
           key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: playwright-
 
+      - name: Download VS Code
+        run: |
+          VSCODE_DIR="$HOME/.vscode-test/vscode-linux-x64-1.107.0"
+          if [ -f "$VSCODE_DIR/is-complete" ]; then
+            echo "VS Code already cached, skipping download."
+            exit 0
+          fi
+          echo "Downloading VS Code 1.107.0 via curl..."
+          mkdir -p "$VSCODE_DIR"
+          curl \
+            --retry 5 \
+            --retry-delay 10 \
+            --retry-connrefused \
+            --connect-timeout 30 \
+            --max-time 300 \
+            --location \
+            --fail \
+            --output /tmp/vscode.tar.gz \
+            "https://update.code.visualstudio.com/1.107.0/linux-x64/stable"
+          tar -xzf /tmp/vscode.tar.gz -C "$VSCODE_DIR" --strip-components=1
+          rm /tmp/vscode.tar.gz
+          touch "$VSCODE_DIR/is-complete"
+          echo "VS Code downloaded and extracted."
+
       - name: Run E2E Tests
         id: e2e
-        shell: bash
-        run: |
-          set +e
-          for attempt in 1 2 3; do
-            xvfb-run -a pnpm test:e2e 2>&1 | tee e2e-output.txt
-            status=${PIPESTATUS[0]}
-            if [ $status -eq 0 ]; then
-              break
-            elif [ $attempt -lt 3 ]; then
-              echo "Attempt $attempt failed (exit $status), retrying in 15s..."
-              sleep 15
-            else
-              exit $status
-            fi
-          done
+        run: xvfb-run -a pnpm test:e2e 2>&1 | tee e2e-output.txt
       
       - name: Post E2E Report
         if: always()
