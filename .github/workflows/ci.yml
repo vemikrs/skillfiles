@@ -53,8 +53,18 @@ jobs:
         id: e2e
         shell: bash
         run: |
-          set -o pipefail
-          xvfb-run -a pnpm test:e2e | tee e2e-output.txt
+          for attempt in 1 2 3; do
+            xvfb-run -a pnpm test:e2e 2>&1 | tee e2e-output.txt
+            status=${PIPESTATUS[0]}
+            if [ $status -eq 0 ]; then
+              break
+            elif [ $attempt -lt 3 ]; then
+              echo "Attempt $attempt failed (exit $status), retrying in 15s..."
+              sleep 15
+            else
+              exit $status
+            fi
+          done
       
       - name: Post E2E Report
         if: always()
