@@ -36,6 +36,12 @@ jobs:
       - run: pnpm install
       - run: pnpm compile
 
+      - name: Cache VS Code binary
+        uses: actions/cache@v5
+        with:
+          path: ~/.vscode-test
+          key: vscode-1.107.0-${{ runner.os }}-${{ runner.arch }}
+
       - name: Cache Playwright browsers
         uses: actions/cache@v5
         with:
@@ -43,12 +49,33 @@ jobs:
           key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: playwright-
 
+      - name: Download VS Code
+        run: |
+          VSCODE_DIR="$HOME/.vscode-test/vscode-linux-x64-1.107.0"
+          if [ -f "$VSCODE_DIR/is-complete" ]; then
+            echo "VS Code already cached, skipping download."
+            exit 0
+          fi
+          echo "Downloading VS Code 1.107.0 via curl..."
+          mkdir -p "$VSCODE_DIR"
+          curl \
+            --retry 5 \
+            --retry-delay 10 \
+            --retry-connrefused \
+            --connect-timeout 30 \
+            --max-time 300 \
+            --location \
+            --fail \
+            --output /tmp/vscode.tar.gz \
+            "https://update.code.visualstudio.com/1.107.0/linux-x64/stable"
+          tar -xzf /tmp/vscode.tar.gz -C "$VSCODE_DIR" --strip-components=1
+          rm /tmp/vscode.tar.gz
+          touch "$VSCODE_DIR/is-complete"
+          echo "VS Code downloaded and extracted."
+
       - name: Run E2E Tests
         id: e2e
-        shell: bash
-        run: |
-          set -o pipefail
-          xvfb-run -a pnpm test:e2e | tee e2e-output.txt
+        run: xvfb-run -a pnpm test:e2e 2>&1 | tee e2e-output.txt
       
       - name: Post E2E Report
         if: always()
