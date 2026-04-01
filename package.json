@@ -809,7 +809,7 @@
   "dependencies": {
     "handlebars": "^4.7.9",
     "js-yaml": "^4.1.1",
-    "minimatch": "^10.2.3"
+    "minimatch": "^10.2.5"
   },
   "pnpm": {
     "overrides": {
